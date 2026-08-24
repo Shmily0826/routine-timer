@@ -1,0 +1,6 @@
+{
+  "name": "group-practice-timer",
+  "private": true,
+  "scripts": { "typecheck": "tsc --noEmit", "test": "node --test test/*.test.mjs" },
+  "devDependencies": { "typescript": "^5.6.3" }
+}
