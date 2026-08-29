@@ -5,7 +5,8 @@
     "typecheck": "tsc --noEmit",
     "build:wechat": "tsc -p tsconfig.wechat.json && node scripts/copy-wechat-build.mjs",
     "test": "node --test test/*.test.mjs",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "recovery": "node scripts/recovery_test.mjs"
   },
   "devDependencies": {
     "miniprogram-api-typings": "^3.12.0",
