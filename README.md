@@ -26,4 +26,4 @@
 - `npm run typecheck`：PASS（`strict`，覆盖 `miniprogram/**` 与 `src/**` 全部 production code；`wx`/`Page`/timer 全局类型来自 `miniprogram-api-typings`，非 `any` 桩）。
 - `npm test`：PASS，10/10（Timer Engine 7，storage/Routine 3；新增 stale-session→completed 边界回归测试）。
 - `npm run build:wechat`：PASS，生成页面与 domain 的小程序 `.js` 文件。
-- WeChat DevTools：真实 `cli open --project D:\CODE\project\Timer` PASS，模拟器首页与 Timer 页面已打开。Console 无可见红色异常；黄色提示仍需进一步清理/确认。完整 simulator flow 和真机尚未验证。
+- WeChat DevTools：真实 `cli open --project D:\CODE\project\Timer` PASS，模拟器首页与 Timer 页面已打开。唯一的黄色提示 `routeTo appLaunch timeout` 已定位为缺少 `app.js` 入口（`miniprogram/` 仅有 `app.json`，IDE 无法确认 `onLaunch`），新增 `miniprogram/app.ts` 后最新 WeappLog 中已无该警告与 ERROR。完整 simulator flow 和真机尚未验证。
