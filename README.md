@@ -26,4 +26,5 @@
 - `npm run typecheck`：PASS（`strict`，覆盖 `miniprogram/**` 与 `src/**` 全部 production code；`wx`/`Page`/timer 全局类型来自 `miniprogram-api-typings`，非 `any` 桩）。
 - `npm test`：PASS，10/10（Timer Engine 7，storage/Routine 3；新增 stale-session→completed 边界回归测试）。
 - `npm run build:wechat`：PASS，生成页面与 domain 的小程序 `.js` 文件。
-- WeChat DevTools：真实 `cli open --project D:\CODE\project\Timer` PASS，模拟器首页与 Timer 页面已打开。唯一的黄色提示 `routeTo appLaunch timeout` 已定位为缺少 `app.js` 入口（`miniprogram/` 仅有 `app.json`，IDE 无法确认 `onLaunch`），新增 `miniprogram/app.ts` 后最新 WeappLog 中已无该警告与 ERROR。完整 simulator flow 和真机尚未验证。
+- WeChat DevTools：真实 `cli open --project D:\CODE\project\Timer` PASS。唯一的黄色提示 `routeTo appLaunch timeout` 已定位为缺少 `app.js` 入口，新增 `miniprogram/app.ts` 后最新 WeappLog 中已无该警告与 ERROR。
+- 模拟器冒烟（自动化端口 + `miniprogram-automator`，无需手动点击）：`node scripts/smoke.mjs` → **21/22 PASS**，覆盖倒计时、work→rest、进组、暂停/恢复、上一组/下一组、完成、再来一次、停止返回、Routine 保存/删除。已修复 Quick Setup 的训练/休息秒数不生效的 bug（详见 `TEST_REPORT.md`）。恢复卡片（未停止就离开）与后台/锁屏/声音/震动需真机验证。

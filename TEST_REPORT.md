@@ -26,7 +26,35 @@ Real compile status: **PASS (2026-08-28)**.
 
 The first compile attempt exposed the missing TypeScript-to-JavaScript build output (`home.js` was absent). `npm run build:wechat` now emits the page/domain JavaScript into `miniprogram/`, and the generated files are gitignored. The single yellow warning visible in the console — `routeTo appLaunch timeout` in the PROJECT WeappLog — was traced to the same root cause extended to the app entry: `miniprogram/` had `app.json` but no `app.js`, so the IDE could not confirm `onLaunch` ran. Adding `miniprogram/app.ts` (`App({ onLaunch() {} })`) and rebuilding cleared the warning; the newest WeappLog after a forced IDE relaunch + reopen shows **0 `appLaunch` mentions and 0 ERROR lines**. `cue.wav` is present and loads. Simulator smoke and Android real-device regression still NOT RUN.
 
-Simulator smoke: Home → Start → Timer navigation and live countdown were observed. Pause/final transition/Routine/recovery/background flows were not fully completed in this run and remain pending.
+### Simulator smoke (2026-08-29) — driven headlessly via the automation port
+DevTools exposes an automation port (`cli auto --project <path> --auto-port 9420 --trust-project`) that the
+official `miniprogram-automator` SDK can drive, so the simulator was exercised WITHOUT manual clicking.
+Two constraints found: programmatic navigation (`navigateTo`/`reLaunch`/`navigateBack`) throws
+`Uncaught [object Object]` (so every transition uses real UI taps), and the automator drops the page node
+after ~8s on the timer page (so each timer session is kept short).
+
+`node scripts/smoke.mjs` → **21/22 PASS**:
+- Quick setup applied and **rounds inherit the new work/rest** (`items=["3/1","3/1","3/1"]`) — the bug fix below.
+- start → timer; round 1/total 3; countdown advances (`00:03 -> 00:02`); work → rest; advances to round 2.
+- Session completes (`completed=true`); 再来一次 resets it; stop returns to home.
+- Pause freezes (`01:00 -> 01:00`); resume restarts (`01:00 -> 00:59`); next `1 -> 2`; previous `2 -> 1`.
+- Explicit stop **discards** the session (no recovery card) — correct: `stop()` calls `removeStorageSync`.
+- Routines: page reached, save `0 -> 1`, delete `1 -> 0`.
+
+NOT verified in the simulator (needs a real device):
+- **Recovery card on return.** The only way off the timer page is 停止/退出, which discards the session by
+  design; `cli close` + `cli open` did not surface a card and `callWxMethod('getStorageSync')` returns
+  undefined, so the cold-start path is inconclusive rather than proven broken.
+- Background / lock-screen behaviour, sound, vibration, keep-screen-on.
+
+### Bug fixed: Quick Setup work/rest inputs were inert
+`home.ts` set only the top-level `duration`/`rest`, but `start()` builds the session from `items[]`
+(`workSec: x.work || duration`), and `items[]` still held the `onLoad` defaults (30/10). Setting 3s/1s
+still ran a 30s/10s timer. Fix: `onDuration`/`onRest` now propagate to every item **not individually
+overridden** (tracked via `ow`/`or` flags set by `onItemWork`/`onItemRest`). The flags never reach
+storage — `start()` maps to a clean `{name, workSec, restSec}` shape.
+Also: `tsconfig.json` now pins `types: ["miniprogram-api-typings"]`, because `miniprogram-automator`
+pulls in stub `@types/*` packages (`xtend`, `xml2js`) that broke `tsc` with TS2688.
 
 ## Real-device validation remaining
 Android physical device: background/foreground, lock screen, process kill + cold start, rapid taps, sound, silent/media volume, vibration, keep-screen-on, long session, Routine save/start/rename/delete, Continue/Discard recovery.
