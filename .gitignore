@@ -18,3 +18,10 @@ miniprogram/project.private.config.json
 coverage/
 dist/
 *.tsbuildinfo
+miniprogram/**/*.js
+miniprogram/**/*.js.map
+
+# agent workspace (project memory), not project source
+.workbuddy/
+# intermediate tsc output; scripts/copy-wechat-build.mjs deletes it after copying
+.wechat-build/

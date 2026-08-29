@@ -4,7 +4,7 @@
 
 ## 本地运行
 
-安装 Node.js 依赖后运行 `npm install`、`npm run typecheck` 和 `npm test`。使用微信开发者工具打开仓库根目录，项目配置的 `miniprogramRoot` 为 `miniprogram/`；`appid` 为占位的 `touristappid`，如需真机能力请替换为自己的 AppID。
+安装 Node.js 依赖后运行 `npm install`、`npm run typecheck`、`npm test` 和 `npm run build:wechat`。使用微信开发者工具打开仓库根目录，项目配置的 `miniprogramRoot` 为 `miniprogram/`；当前配置使用开发 AppID，真机能力仍需按账号权限验证。
 
 生产逻辑（单一来源）位于：
 - Timer Engine：`miniprogram/domain/timer.ts`
@@ -18,11 +18,12 @@
 
 ## 限制
 
-微信小程序后台或锁屏时不能保证 JavaScript 持续执行，因此后台实时声音/震动不保证；回到前台会从 Storage 读取 Session 并按时间戳跨越多个 phase。保持屏幕常亮、震动、声音和锁屏表现需在微信开发者工具/真实手机验证（REAL DEVICE REQUIRED）。声音调用已封装，未提交音频素材时会静默 fallback；Routine 列表 UI 的保存/加载/删除已实现。
+微信小程序后台或锁屏时不能保证 JavaScript 持续执行，因此后台实时声音/震动不保证；回到前台会从 Storage 读取 Session 并按时间戳跨越多个 phase。保持屏幕常亮、震动、声音和锁屏表现需在微信开发者工具/真实手机验证（REAL DEVICE REQUIRED）。声音调用使用本地 `miniprogram/assets/cue.wav`，播放失败会静默 fallback；Routine 列表 UI 的保存/加载/删除已实现。
 
 ## Validation status
 
-- `npm install`：成功（安装 `typescript` + `miniprogram-api-typings`，生成 `package-lock.json`）。
+- `npm install`：已存在本地依赖（`typescript` + `miniprogram-api-typings`，`package-lock.json` 已存在）。
 - `npm run typecheck`：PASS（`strict`，覆盖 `miniprogram/**` 与 `src/**` 全部 production code；`wx`/`Page`/timer 全局类型来自 `miniprogram-api-typings`，非 `any` 桩）。
 - `npm test`：PASS，10/10（Timer Engine 7，storage/Routine 3；新增 stale-session→completed 边界回归测试）。
-- WeChat DevTools：本机未安装，故 compile / simulator 未验证。请在正常 Windows 环境执行 `npm install` → `npm run typecheck` → 用 DevTools 打开本仓库 → 真机预览，再进行 Android 真机回归。
+- `npm run build:wechat`：PASS，生成页面与 domain 的小程序 `.js` 文件。
+- WeChat DevTools：真实 `cli open --project D:\CODE\project\Timer` PASS，模拟器首页与 Timer 页面已打开。Console 无可见红色异常；黄色提示仍需进一步清理/确认。完整 simulator flow 和真机尚未验证。

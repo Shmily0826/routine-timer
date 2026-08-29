@@ -17,7 +17,16 @@ Tests import the production implementation directly (`miniprogram/domain/timer.t
 JSON config parses; pages registered in `miniprogram/app.json`; every WXML handler maps to a Page method; Page imports resolve within `miniprogramRoot`; `miniprogram/assets/cue.wav` is a valid 1644-byte RIFF/WAVE; single Timer Engine source (`miniprogram/domain/timer.ts`), no duplicate implementation.
 
 ## WeChat DevTools
-NOT INSTALLED in this environment. Compile and simulator smoke tests were NOT RUN. Manual validation required before Android device testing.
+INSTALLED (this run). Official Stable Build 2.02.2608060 (2026/08/25) from `devtools.wxqcloud.qq.com.cn`; Authenticode verified — `CN=Tencent Technology (Shenzhen) Company Limited`, DigiCert G4 Code Signing CA, timestamped. NSIS silent install to `D:\Dev-Setup\wechat-devtools` (not redirected to Program Files). CLI entry: `cli.bat` / `resources/app.asar.unpacked/js/common/cli/index.js`.
+
+Real compile status: **PASS (2026-08-28)**.
+- After enabling CLI Service Port in the IDE, `cli open --project D:\CODE\project\Timer` returned `√ open` and the simulator displayed the Home page and Timer page.
+- `compile` is not a CLI subcommand; `cli open --project <path>` is what opens the project and triggers a real IDE compile.
+- Prepared `D:\Dev-Setup\devtools_compile.ps1`: launches the IDE (interactive session, so the WeChat login QR can show), pipes `y` to enable the service port, runs `cli open` in a retry loop, and captures full output to `D:\Dev-Setup\devtools_open.log`. Simulator smoke + Android device testing still NOT RUN.
+
+The first compile attempt exposed the missing TypeScript-to-JavaScript build output (`home.js` was absent). `npm run build:wechat` now emits the page/domain JavaScript into `miniprogram/`, and the generated files are gitignored. No red console exception or missing cue asset was visible; the DevTools warning counter remains to be investigated.
+
+Simulator smoke: Home → Start → Timer navigation and live countdown were observed. Pause/final transition/Routine/recovery/background flows were not fully completed in this run and remain pending.
 
 ## Real-device validation remaining
 Android physical device: background/foreground, lock screen, process kill + cold start, rapid taps, sound, silent/media volume, vibration, keep-screen-on, long session, Routine save/start/rename/delete, Continue/Discard recovery.

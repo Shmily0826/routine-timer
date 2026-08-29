@@ -1,6 +1,6 @@
 {
   "name": "group-practice-timer",
   "private": true,
-  "scripts": { "typecheck": "tsc --noEmit", "test": "node --test test/*.test.mjs" },
+  "scripts": { "typecheck": "tsc --noEmit", "build:wechat": "tsc -p tsconfig.wechat.json && node scripts/copy-wechat-build.mjs", "test": "node --test test/*.test.mjs" },
   "devDependencies": { "typescript": "^5.6.3", "miniprogram-api-typings": "^3.12.0" }
 }
