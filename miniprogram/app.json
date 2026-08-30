@@ -1,1 +1,1 @@
-{"pages":["pages/home/home","pages/timer/timer","pages/routines/routines"],"window":{"navigationBarTitleText":"分组练习计时器","navigationBarBackgroundColor":"#101828","navigationBarTextStyle":"white","backgroundColor":"#f4f7fb"},"style":"v2","sitemapLocation":"sitemap.json"}
+{"pages":["pages/home/home","pages/timer/timer","pages/routines/routines","pages/history/history"],"window":{"navigationBarTitleText":"分组练习计时器","navigationBarBackgroundColor":"#101828","navigationBarTextStyle":"white","backgroundColor":"#f4f7fb"},"style":"v2","sitemapLocation":"sitemap.json"}

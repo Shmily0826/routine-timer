@@ -135,5 +135,6 @@ Page({
     wx.removeStorageSync(SESSION_KEY);
     wx.navigateTo({url:'/pages/timer/timer'});
   },
-  routines(){wx.navigateTo({url:'/pages/routines/routines'});}
+  routines(){wx.navigateTo({url:'/pages/routines/routines'});},
+  history(){wx.navigateTo({url:'/pages/history/history'});}
 })

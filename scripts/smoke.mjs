@@ -16,6 +16,7 @@ import automator from 'miniprogram-automator';
 
 const WS = process.env.WS_ENDPOINT || 'ws://127.0.0.1:9420';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+process.on('unhandledRejection', async (e) => { try { await mp?.disconnect?.(); } catch (_) {} console.error('UNHANDLED REJECTION:', e && e.message); process.exit(1); });
 const results = [];
 function check(name, ok, detail = '') {
   results.push({ name, ok: !!ok, detail });
@@ -78,6 +79,9 @@ async function stopToHome() {
 }
 
 try {
+  // Always begin from Home, so this suite is chainable after any other suite.
+  await mp.evaluate(() => { try { wx.reLaunch({ url: '/pages/home/home' }); } catch (_) {} });
+  await sleep(1500);
   // ---------- warm-up: the simulator may not have rendered a page yet ----------
   let page = null;
   for (let i = 1; i <= 12; i++) {
@@ -135,6 +139,11 @@ try {
   check('session B stop returns to home', home.path.includes('home'), home.path);
 
   // ---------- Session C: 3 rounds / 60s / 5s -> pause, resume, next, previous ----------
+  // Fresh page stack: after sessions A/B the automator timer-page node can go
+  // stale (it drops the node after a few seconds on timer), so reLaunch Home to
+  // get a clean timer instance for the pause/resume checks.
+  await mp.evaluate(() => { try { wx.reLaunch({ url: '/pages/home/home' }); } catch (_) {} });
+  await sleep(1500);
   await configure(3, 60, 5);
   await tapSel('button.start', 'start C');
   await sleep(1200);
@@ -195,7 +204,7 @@ try {
   check('routine saved', rd.routines.length === before + 1, `${before} -> ${rd.routines.length}`);
 
   const cntBefore = (await readData()).routines.length;
-  await tap(4, 'delete routine');
+  await tap(5, 'delete routine');
   await sleep(1500);
   const cntAfter = (await readData()).routines.length;
   check('routine deleted', cntAfter === cntBefore - 1, `${cntBefore} -> ${cntAfter}`);

@@ -9,7 +9,9 @@
     "recovery": "node scripts/recovery_test.mjs",
     "prefs": "node scripts/prefs_test.mjs",
     "routine-edit": "node scripts/routine_edit_test.mjs",
-    "verify": "npm run typecheck && npm run test && npm run recovery && npm run routine-edit && npm run prefs && npm run smoke"
+    "routine-dup": "node scripts/routine_dup_test.mjs",
+    "history": "node scripts/history_test.mjs",
+    "verify": "npm run typecheck && npm run test && npm run recovery && npm run routine-edit && npm run routine-dup && npm run prefs && npm run history && npm run smoke"
   },
   "devDependencies": {
     "miniprogram-api-typings": "^3.12.0",

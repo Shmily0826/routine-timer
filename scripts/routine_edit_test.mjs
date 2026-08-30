@@ -4,6 +4,7 @@
 import automator from 'miniprogram-automator';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+process.on('unhandledRejection', async (e) => { try { await mp?.disconnect?.(); } catch (_) {} console.error('UNHANDLED REJECTION:', e && e.message); process.exit(1); });
 let pass = 0, fail = 0;
 const check = (name, cond) => { if (cond) { pass++; console.log('PASS ' + name); } else { fail++; console.log('FAIL ' + name); } };
 
@@ -15,6 +16,12 @@ const seedR1 = () => ({
 
 const mp = await automator.connect({ wsEndpoint: 'ws://127.0.0.1:9420' });
 try {
+  // Warm-up: ensure the simulator has rendered before we drive it.
+  for (let i = 1; i <= 12; i++) {
+    const ok = await mp.evaluate(() => !!(getCurrentPages() && getCurrentPages().length)).catch(() => false);
+    if (ok) break;
+    await sleep(2000);
+  }
   // Seed one routine; clear prefs so onLoad fallback doesn't interfere.
   await mp.evaluate((seed) => {
     wx.removeStorageSync('group-timer-prefs');

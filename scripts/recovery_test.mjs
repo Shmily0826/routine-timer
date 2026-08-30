@@ -19,10 +19,24 @@ import automator from 'miniprogram-automator';
 
 const WS = process.env.WS_ENDPOINT || 'ws://127.0.0.1:9420';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Guarantee the automator socket is released even if an evaluate/tap times out
+// (an uncaught rejection would otherwise skip mp.disconnect and wedge the IDE).
+process.on('unhandledRejection', async (e) => { try { await mp?.disconnect?.(); } catch (_) {} console.error('UNHANDLED REJECTION:', e && e.message); process.exit(1); });
 let pass = 0, fail = 0;
 const check = (ok, label, extra = '') => { if (ok) pass++; else fail++; console.log((ok ? 'PASS  ' : 'FAIL  ') + label + (extra ? '  ' + extra : '')); };
 
 const mp = await automator.connect({ wsEndpoint: WS });
+
+// Warm-up: when this is the first simulator suite after other (non-simulator)
+// steps, the app may not have rendered yet. Wait for a page, then reLaunch Home.
+for (let i = 1; i <= 12; i++) {
+  const ok = await mp.evaluate(() => !!(getCurrentPages() && getCurrentPages().length)).catch(() => false);
+  if (ok) break;
+  console.log('  ..waiting for simulator app (' + i + ')');
+  await sleep(2000);
+}
+await mp.evaluate(() => { try { wx.reLaunch({ url: '/pages/home/home' }); } catch (_) {} });
+await sleep(1500);
 
 const readData = async (route) => {
   for (let i = 0; i < 6; i++) {
@@ -40,6 +54,9 @@ const readData = async (route) => {
 
 const injectAndFire = async () => {
   await mp.evaluate(() => {
+    wx.removeStorageSync('group-timer-session');
+    wx.removeStorageSync('group-timer-prefs');
+    wx.removeStorageSync('active-rounds');
     const now = Date.now();
     const rounds = [
       { name: '第一组', workSec: 600, restSec: 60 },
@@ -50,7 +67,14 @@ const injectAndFire = async () => {
     wx.setStorageSync('group-timer-session', s);
     wx.reLaunch({ url: '/pages/home/home' }); // framework re-show -> real onShow
   });
-  await sleep(1500);
+  // Poll for the EXACT expected recovery card (cold simulator / stale instance
+  // can briefly show a previous card, so wait for the right round + name).
+  const deadline = Date.now() + 9000;
+  while (Date.now() < deadline) {
+    const hd = await readData('pages/home/home');
+    if (hd && hd.recovery && hd.recovery.round === 2 && hd.recovery.name === '第二组') return;
+    await sleep(400);
+  }
 };
 
 // ---- Discard branch (stays on Home) ----
