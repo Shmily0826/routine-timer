@@ -1,11 +1,12 @@
 import {reconcile} from '../../domain/timer';
 import {SESSION_KEY,PREFS_KEY,ROUTINES_KEY,ACTIVE_ROUNDS_KEY} from '../../domain/storage';
 
+const MAX=999;
 function parseSec(raw:any, min:number, fallback:number):number{
   const v=Number(raw);
   if(!Number.isFinite(v)) return fallback;
   if(v<min) return min;
-  return Math.min(3600, v);
+  return Math.min(MAX, v);
 }
 
 Page({
