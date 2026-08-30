@@ -11,7 +11,8 @@
     "routine-edit": "node scripts/routine_edit_test.mjs",
     "routine-dup": "node scripts/routine_dup_test.mjs",
     "history": "node scripts/history_test.mjs",
-    "verify": "npm run typecheck && npm run test && npm run recovery && npm run routine-edit && npm run routine-dup && npm run prefs && npm run history && npm run smoke"
+    "fixes": "node scripts/fixes_test.mjs",
+    "verify": "npm run typecheck && npm run test && npm run recovery && npm run routine-edit && npm run routine-dup && npm run prefs && npm run history && npm run fixes && npm run smoke"
   },
   "devDependencies": {
     "miniprogram-api-typings": "^3.12.0",

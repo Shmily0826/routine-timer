@@ -1,5 +1,5 @@
 import {reconcile} from '../../domain/timer';
-import {SESSION_KEY,PREFS_KEY,ROUTINES_KEY,ACTIVE_ROUNDS_KEY} from '../../domain/storage';
+import {SESSION_KEY,PREFS_KEY,ROUTINES_KEY,ACTIVE_ROUNDS_KEY,nextRoutineName} from '../../domain/storage';
 
 const MAX=999;
 // Total rounds share one cap everywhere (input, prefs reload, start, save);
@@ -93,9 +93,9 @@ Page({
     if(this.data.editId){
       const i=list.findIndex((x:any)=>x&&x.id===this.data.editId);
       if(i>=0){list[i]={...list[i],rounds,updatedAt:now};}
-      else{list.push({id:this.data.editId,name:`Routine ${list.length+1}`,rounds,createdAt:now,updatedAt:now});}
+      else{list.push({id:this.data.editId,name:nextRoutineName(list),rounds,createdAt:now,updatedAt:now});}
     }else{
-      list.push({id:String(now),name:`Routine ${list.length+1}`,rounds,createdAt:now,updatedAt:now});
+      list.push({id:String(now),name:nextRoutineName(list),rounds,createdAt:now,updatedAt:now});
     }
     wx.setStorageSync(ROUTINES_KEY,list);
     this.setData({editId:null});
