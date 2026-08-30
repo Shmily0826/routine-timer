@@ -38,6 +38,6 @@
 | 锁屏 / 后台计时 | adb 锁屏 15s 后唤醒，对比剩余时间 | ✅ 未归零、未冻住，继续跑完并显示完成汇总 |
 | 声音 / 震动的**实际感知** | — | ⏳ 待确认：插桩只证明 `cue()` 执行，未证明用户听到 / 感到 |
 | 恢复卡片（未停止就离开） | — | ⏳ 待真机验证（模拟器 `recovery` 8/8 已通过） |
-| iOS | — | ❌ 未测试；代码未设 `setInnerAudioOption({obeyMuteSwitch:false})`，静音键会屏蔽提示音 |
+| iOS | — | ⏳ 代码已加 `wx.setInnerAudioOption({obeyMuteSwitch:false})`，待真机验证；静音键理论上不再屏蔽提示音 |
 
 自动提示的修正是 commit `abfaf2b`：`render()` 内检测 `phase` / `currentRoundIndex` / `completed` 变化后自动触发 `cue()`，并去掉 `goNext` 里重复的显式调用。
