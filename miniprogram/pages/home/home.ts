@@ -1,20 +1,24 @@
 import {reconcile} from '../../domain/timer';
 import {SESSION_KEY,PREFS_KEY,ROUTINES_KEY,ACTIVE_ROUNDS_KEY} from '../../domain/storage';
 
-function clamp(n:number, min:number, max:number, fallback:number):number{
-  const v=Number(n);
-  return Number.isFinite(v)?Math.min(max,Math.max(min,v)):fallback;
+function parseSec(raw:any, min:number, fallback:number):number{
+  const v=Number(raw);
+  if(!Number.isFinite(v)) return fallback;
+  if(v<min) return min;
+  return Math.min(3600, v);
 }
 
 Page({
-  data:{groups:8,duration:30,rest:10,expanded:false,items:[] as any[],recovery:null as any,editId:null as any},
+  data:{
+    groups:'8', duration:'30', rest:'10', expanded:false, items:[] as any[], recovery:null as any, editId:null as any
+  },
 
   onLoad(options:any){
     const prefs=this.readPrefs();
     if(prefs){
-      this.setData({groups:prefs.groups,duration:prefs.duration,rest:prefs.rest,items:prefs.items});
+      this.setData({groups:String(prefs.groups),duration:String(prefs.duration),rest:String(prefs.rest),items:prefs.items});
     }else{
-      this.setData({items:Array.from({length:8},(_,i)=>({name:`动作 ${i+1}`,work:30,rest:10,ow:false,or:false}))});
+      this.setData({items:Array.from({length:8},(_,i)=>({name:`动作 ${i+1}`,work:'30',rest:'10',ow:false,or:false}))});
     }
     if(options&&options.edit){this.loadRoutineForEdit(String(options.edit));}
   },
@@ -24,13 +28,13 @@ Page({
       const p=wx.getStorageSync(PREFS_KEY);
       if(p&&Array.isArray(p.items)&&p.items.length){
         return {
-          groups:clamp(p.groups,1,50,p.items.length),
-          duration:clamp(p.duration,1,3600,30),
-          rest:clamp(p.rest,0,3600,0),
+          groups:parseSec(p.groups,1,8),
+          duration:parseSec(p.duration,1,30),
+          rest:parseSec(p.rest,0,0),
           items:p.items.slice(0,50).map((x:any,i:number)=>({
             name:typeof x.name==='string'?x.name:`动作 ${i+1}`,
-            work:clamp(x.work,1,3600,30),
-            rest:clamp(x.rest,0,3600,0),
+            work:String(x.work??30),
+            rest:String(x.rest??0),
             ow:false,or:false
           }))
         };
@@ -42,10 +46,10 @@ Page({
   persistPrefs(){
     try{
       wx.setStorageSync(PREFS_KEY,{
-        groups:this.data.groups,
-        duration:this.data.duration,
-        rest:this.data.rest,
-        items:this.data.items.map((x:any)=>({name:x.name||'',work:x.work,rest:x.rest}))
+        groups:parseSec(this.data.groups,1,8),
+        duration:parseSec(this.data.duration,1,30),
+        rest:parseSec(this.data.rest,0,0),
+        items:this.data.items.map((x:any)=>({name:x.name||'',work:parseSec(x.work,1,30),rest:parseSec(x.rest,0,0)}))
       });
     }catch{}
   },
@@ -57,21 +61,27 @@ Page({
       if(r&&Array.isArray(r.rounds)&&r.rounds.length){
         const items=r.rounds.map((x:any,i:number)=>({
           name:typeof x.name==='string'?x.name:`动作 ${i+1}`,
-          work:clamp(x.workSec,1,3600,30),
-          rest:clamp(x.restSec,0,3600,0),
+          work:String(x.workSec??30),
+          rest:String(x.restSec??0),
           ow:true,or:true
         }));
-        this.setData({editId:id,groups:items.length,duration:items[0].work,rest:items[0].rest,items});
+        this.setData({editId:id,groups:String(items.length),duration:items[0].work,rest:items[0].rest,items});
       }
     }catch{}
   },
 
   saveRoutine(){
-    const rounds=this.data.items.map((x:any)=>({
-      name:x.name||'',
-      workSec:x.work||this.data.duration,
-      restSec:x.rest===undefined?this.data.rest:x.rest
-    }));
+    const n=parseSec(this.data.groups,1,8);
+    const duration=parseSec(this.data.duration,1,30);
+    const rest=parseSec(this.data.rest,0,0);
+    const rounds=Array.from({length:n},(_,i)=>{
+      const it=this.data.items[i]||{};
+      return {
+        name:it.name||'',
+        workSec:it.ow?parseSec(it.work,1,duration):duration,
+        restSec:it.or?parseSec(it.rest,0,rest):rest
+      };
+    });
     if(!rounds.length)return;
     const now=Date.now();
     const list=wx.getStorageSync(ROUTINES_KEY)||[];
@@ -102,17 +112,17 @@ Page({
   continue(){wx.navigateTo({url:'/pages/timer/timer'});},
 
   onGroups(e:any){
-    const n=clamp(e.detail.value,1,50,1);
-    this.setData({groups:n,items:Array.from({length:n},(_,i)=>this.data.items[i]||{name:`动作 ${i+1}`,work:this.data.duration,rest:this.data.rest,ow:false,or:false})});
+    const n=parseSec(e.detail.value,1,50);
+    this.setData({groups:String(n),items:Array.from({length:n},(_,i)=>this.data.items[i]||{name:`动作 ${i+1}`,work:this.data.duration,rest:this.data.rest,ow:false,or:false})});
     this.persistPrefs();
   },
   onDuration(e:any){
-    const d=clamp(e.detail.value,1,3600,30);
+    const d=e.detail.value;
     this.setData({duration:d,items:this.data.items.map((x:any)=>x.ow?x:Object.assign({},x,{work:d}))});
     this.persistPrefs();
   },
   onRest(e:any){
-    const r=clamp(e.detail.value,0,3600,0);
+    const r=e.detail.value;
     this.setData({rest:r,items:this.data.items.map((x:any)=>x.or?x:Object.assign({},x,{rest:r}))});
     this.persistPrefs();
   },
@@ -120,17 +130,24 @@ Page({
   onName(e:any){this.setData({[`items[${e.currentTarget.dataset.index}].name`]:e.detail.value});this.persistPrefs();},
   onItemWork(e:any){
     const i=e.currentTarget.dataset.index;
-    this.setData({[`items[${i}].work`]:clamp(e.detail.value,1,3600,this.data.duration),[`items[${i}].ow`]:true});
+    this.setData({[`items[${i}].work`]:e.detail.value,[`items[${i}].ow`]:true});
     this.persistPrefs();
   },
   onItemRest(e:any){
     const i=e.currentTarget.dataset.index;
-    this.setData({[`items[${i}].rest`]:clamp(e.detail.value,0,3600,0),[`items[${i}].or`]:true});
+    this.setData({[`items[${i}].rest`]:e.detail.value,[`items[${i}].or`]:true});
     this.persistPrefs();
   },
 
   start(){
-    wx.setStorageSync(ACTIVE_ROUNDS_KEY,this.data.items.map((x:any)=>({name:x.name||'',workSec:x.work||this.data.duration,restSec:x.rest===undefined?this.data.rest:x.rest})));
+    const n=parseSec(this.data.groups,1,8);
+    const duration=parseSec(this.data.duration,1,30);
+    const rest=parseSec(this.data.rest,0,0);
+    const rounds=Array.from({length:n},(_,i)=>{
+      const it=this.data.items[i]||{};
+      return {name:it.name||'',workSec:it.ow?parseSec(it.work,1,duration):duration,restSec:it.or?parseSec(it.rest,0,rest):rest};
+    });
+    wx.setStorageSync(ACTIVE_ROUNDS_KEY,rounds);
     this.persistPrefs();
     wx.removeStorageSync(SESSION_KEY);
     wx.navigateTo({url:'/pages/timer/timer'});
