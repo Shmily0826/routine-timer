@@ -18,7 +18,7 @@
 
 ## 限制
 
-微信小程序后台或锁屏时不能保证 JavaScript 持续执行，因此后台实时声音/震动不保证；回到前台会从 Storage 读取 Session 并按时间戳跨越多个 phase。保持屏幕常亮、震动、声音和锁屏表现需在微信开发者工具/真实手机验证（REAL DEVICE REQUIRED）。声音调用使用本地 `miniprogram/assets/cue.wav`，播放失败会静默 fallback；Routine 列表 UI 的保存/加载/删除已实现。
+微信小程序后台或锁屏时不能保证 JavaScript 持续执行，因此后台实时声音/震动不保证；回到前台会从 Storage 读取 Session 并按时间戳跨越多个 phase。计时页 `onHide` 会 `clearInterval` 停止 250ms tick、`onShow` 才重启并补一次渲染，因此**自动提示仅在小程序前台且屏幕亮着时触发**，锁屏或切走微信期间不触发，回前台只补最后一次（已真机验证，见「真机验证」一节）。声音调用使用本地 `miniprogram/assets/cue.wav`，播放失败会静默 fallback；Routine 列表 UI 的保存/加载/删除已实现。
 
 ## Validation status
 
@@ -27,4 +27,17 @@
 - `npm test`：PASS，10/10（Timer Engine 7，storage/Routine 3；新增 stale-session→completed 边界回归测试）。
 - `npm run build:wechat`：PASS，生成页面与 domain 的小程序 `.js` 文件。
 - WeChat DevTools：真实 `cli open --project D:\CODE\project\Timer` PASS。唯一的黄色提示 `routeTo appLaunch timeout` 已定位为缺少 `app.js` 入口，新增 `miniprogram/app.ts` 后最新 WeappLog 中已无该警告与 ERROR。
-- 模拟器冒烟（自动化端口 + `miniprogram-automator`，无需手动点击）：`node scripts/smoke.mjs` → **21/22 PASS**，覆盖倒计时、work→rest、进组、暂停/恢复、上一组/下一组、完成、再来一次、停止返回、Routine 保存/删除。已修复 Quick Setup 的训练/休息秒数不生效的 bug（详见 `TEST_REPORT.md`）。恢复卡片（未停止就离开）与后台/锁屏/声音/震动需真机验证。
+- 模拟器冒烟（自动化端口 + `miniprogram-automator`，无需手动点击）：`node scripts/smoke.mjs` → **21/22 PASS**，覆盖倒计时、work→rest、进组、暂停/恢复、上一组/下一组、完成、再来一次、停止返回、Routine 保存/删除。已修复 Quick Setup 的训练/休息秒数不生效的 bug（详见 `TEST_REPORT.md`）。恢复卡片（未停止就离开）已由 `recovery` harness 覆盖（8/8）。
+
+### 真机验证（Xiaomi 15 Pro / Android 16 / HyperOS V816，adb 驱动）
+
+| 项目 | 方法 | 结果 |
+| --- | --- | --- |
+| 屏幕常亮 keepScreenOn | 临时把屏幕超时改为 15s，静置 32s 后读 `mWakefulness` | ✅ 保持 `Awake`，未熄屏 |
+| 自动阶段提示（work→rest / rest→work / 完成） | 临时在计时页插桩显示 cue 计数，让计时器自动跑完 8 组 | ✅ 计数 0 → 17，三种切换均触发 `cue()` |
+| 锁屏 / 后台计时 | adb 锁屏 15s 后唤醒，对比剩余时间 | ✅ 未归零、未冻住，继续跑完并显示完成汇总 |
+| 声音 / 震动的**实际感知** | — | ⏳ 待确认：插桩只证明 `cue()` 执行，未证明用户听到 / 感到 |
+| 恢复卡片（未停止就离开） | — | ⏳ 待真机验证（模拟器 `recovery` 8/8 已通过） |
+| iOS | — | ❌ 未测试；代码未设 `setInnerAudioOption({obeyMuteSwitch:false})`，静音键会屏蔽提示音 |
+
+自动提示的修正是 commit `abfaf2b`：`render()` 内检测 `phase` / `currentRoundIndex` / `completed` 变化后自动触发 `cue()`，并去掉 `goNext` 里重复的显式调用。
