@@ -6,7 +6,9 @@
     "build:wechat": "tsc -p tsconfig.wechat.json && node scripts/copy-wechat-build.mjs",
     "test": "node --test test/*.test.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "recovery": "node scripts/recovery_test.mjs"
+    "recovery": "node scripts/recovery_test.mjs",
+    "prefs": "node scripts/prefs_test.mjs",
+    "routine-edit": "node scripts/routine_edit_test.mjs"
   },
   "devDependencies": {
     "miniprogram-api-typings": "^3.12.0",
