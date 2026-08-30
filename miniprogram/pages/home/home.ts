@@ -1,7 +1,5 @@
 import {reconcile} from '../../domain/timer';
-const SESSION='group-timer-session';
-const PREFS='group-timer-prefs';
-const ROUTINES='group-timer-routines';
+import {SESSION_KEY,PREFS_KEY,ROUTINES_KEY,ACTIVE_ROUNDS_KEY} from '../../domain/storage';
 
 function clamp(n:number, min:number, max:number, fallback:number):number{
   const v=Number(n);
@@ -23,7 +21,7 @@ Page({
 
   readPrefs(){
     try{
-      const p=wx.getStorageSync(PREFS);
+      const p=wx.getStorageSync(PREFS_KEY);
       if(p&&Array.isArray(p.items)&&p.items.length){
         return {
           groups:clamp(p.groups,1,50,p.items.length),
@@ -43,7 +41,7 @@ Page({
 
   persistPrefs(){
     try{
-      wx.setStorageSync(PREFS,{
+      wx.setStorageSync(PREFS_KEY,{
         groups:this.data.groups,
         duration:this.data.duration,
         rest:this.data.rest,
@@ -54,7 +52,7 @@ Page({
 
   loadRoutineForEdit(id:string){
     try{
-      const list=wx.getStorageSync(ROUTINES)||[];
+      const list=wx.getStorageSync(ROUTINES_KEY)||[];
       const r=list.find((x:any)=>x&&x.id===id);
       if(r&&Array.isArray(r.rounds)&&r.rounds.length){
         const items=r.rounds.map((x:any,i:number)=>({
@@ -76,7 +74,7 @@ Page({
     }));
     if(!rounds.length)return;
     const now=Date.now();
-    const list=wx.getStorageSync(ROUTINES)||[];
+    const list=wx.getStorageSync(ROUTINES_KEY)||[];
     if(this.data.editId){
       const i=list.findIndex((x:any)=>x&&x.id===this.data.editId);
       if(i>=0){list[i]={...list[i],rounds,updatedAt:now};}
@@ -84,23 +82,23 @@ Page({
     }else{
       list.push({id:String(now),name:`Routine ${list.length+1}`,rounds,createdAt:now,updatedAt:now});
     }
-    wx.setStorageSync(ROUTINES,list);
+    wx.setStorageSync(ROUTINES_KEY,list);
     this.setData({editId:null});
     wx.reLaunch({url:'/pages/routines/routines'});
   },
 
   onShow(){
     try{
-      const s=wx.getStorageSync(SESSION);
+      const s=wx.getStorageSync(SESSION_KEY);
       if(s){
         const r=reconcile(s,Date.now()).session;
-        if(r.status==='completed'){wx.removeStorageSync(SESSION);this.setData({recovery:null});}
-        else{wx.setStorageSync(SESSION,r);this.setData({recovery:{round:r.currentRoundIndex+1,name:r.rounds[r.currentRoundIndex]?.name||''}});}
+        if(r.status==='completed'){wx.removeStorageSync(SESSION_KEY);this.setData({recovery:null});}
+        else{wx.setStorageSync(SESSION_KEY,r);this.setData({recovery:{round:r.currentRoundIndex+1,name:r.rounds[r.currentRoundIndex]?.name||''}});}
       }
     }catch{}
   },
 
-  discard(){wx.removeStorageSync(SESSION);this.setData({recovery:null});},
+  discard(){wx.removeStorageSync(SESSION_KEY);this.setData({recovery:null});},
   continue(){wx.navigateTo({url:'/pages/timer/timer'});},
 
   onGroups(e:any){
@@ -132,9 +130,9 @@ Page({
   },
 
   start(){
-    wx.setStorageSync('active-rounds',this.data.items.map((x:any)=>({name:x.name||'',workSec:x.work||this.data.duration,restSec:x.rest===undefined?this.data.rest:x.rest})));
+    wx.setStorageSync(ACTIVE_ROUNDS_KEY,this.data.items.map((x:any)=>({name:x.name||'',workSec:x.work||this.data.duration,restSec:x.rest===undefined?this.data.rest:x.rest})));
     this.persistPrefs();
-    wx.removeStorageSync(SESSION);
+    wx.removeStorageSync(SESSION_KEY);
     wx.navigateTo({url:'/pages/timer/timer'});
   },
   routines(){wx.navigateTo({url:'/pages/routines/routines'});}

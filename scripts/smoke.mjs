@@ -178,7 +178,7 @@ try {
   // The timer page's 停止/退出 handler calls removeStorageSync(KEY), so an
   // explicit stop DISCARDS the session by design - a recovery card must NOT
   // appear. Recovery-on-return (leaving without stopping / cold start) is
-  // covered separately by scripts/recovery_probe.mjs, which restarts the
+  // covered separately by scripts/recovery_test.mjs, which restarts the
   // project with `cli close` + `cli open` to emulate a cold start.
   check('explicit stop discards the session (no recovery card)', rec.recovery === null,
     'recovery=' + JSON.stringify(rec.recovery));
@@ -195,7 +195,7 @@ try {
   check('routine saved', rd.routines.length === before + 1, `${before} -> ${rd.routines.length}`);
 
   const cntBefore = (await readData()).routines.length;
-  await tap(3, 'delete routine');
+  await tap(4, 'delete routine');
   await sleep(1500);
   const cntAfter = (await readData()).routines.length;
   check('routine deleted', cntAfter === cntBefore - 1, `${cntBefore} -> ${cntAfter}`);
