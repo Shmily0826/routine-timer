@@ -56,5 +56,18 @@ storage — `start()` maps to a clean `{name, workSec, restSec}` shape.
 Also: `tsconfig.json` now pins `types: ["miniprogram-api-typings"]`, because `miniprogram-automator`
 pulls in stub `@types/*` packages (`xtend`, `xml2js`) that broke `tsc` with TS2688.
 
+### Harness re-validation (2026-08-31, HEAD 36f4046)
+Re-ran the full gate after the real-device work landed:
+- `npm run typecheck` PASS; `npm test` 10/10 PASS.
+- DevTools compile re-verified: `cli open` → simulator renders Home/Timer/Routines, real IDE compile OK.
+- All six automator suites now green: `smoke` **22/22**, `recovery` **8/8**, `prefs` **8/8**, `routine-edit` **12/12**, `routine-dup` **6/6**, `history` **8/8**.
+- Console audit with `console.error` / `wx.onError` / `wx.onUnhandledRejection` hooks installed before a clean full timer session (3×3s+1s): **0 errors**, session completed correctly. The 14 errors visible in the DevTools console earlier were accumulated during harness runs (intentional navigation exceptions injected by the tests), not product issues.
+- Sound/vibration/keepScreenOn runtime: `cue()` (vibrateShort + InnerAudioContext) fired on every phase transition during the clean run with no runtime errors; physical perception remains device-verified only (see README 真机验证).
+
+Three harness scripts were fixed to make the suites green — all were test bugs, no product changes:
+- `smoke.mjs`: Home data stores input values as strings, so `=== 3` → `Number(...) === 3`; recovery-card check `=== null` → falsy (page uses `undefined`).
+- `prefs_test.mjs`: `wx.reLaunch` inside `mp.evaluate` silently no-ops when already on the target page, so prefill checks read stale in-memory data — reload via automator `mp.reLaunch` instead; string-tolerant assertions.
+- `routine_edit_test.mjs`: `saveRoutine()` builds rounds from the `groups` field, not `items.length` — tests now set `groups` consistently; `ow:false` means "inherit global duration", so the create-case sets `ow:true`; `work` string-tolerant assertion.
+
 ## Real-device validation remaining
 Android physical device: background/foreground, lock screen, process kill + cold start, rapid taps, sound, silent/media volume, vibration, keep-screen-on, long session, Routine save/start/rename/delete, Continue/Discard recovery.

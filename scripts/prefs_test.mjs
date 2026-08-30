@@ -10,24 +10,27 @@ const check = (name, cond) => { if (cond) { pass++; console.log('PASS ' + name);
 
 const mp = await automator.connect({ wsEndpoint: 'ws://127.0.0.1:9420' });
 try {
-  // Inject known prefs, then cold-start Home via framework reLaunch (real onLoad).
+  // Inject known prefs, then cold-start Home. wx.reLaunch inside mp.evaluate
+  // silently no-ops in this environment, so reload via the automator's own
+  // mp.reLaunch (verified: it fires a real onLoad with fresh storage).
   await mp.evaluate(() => {
     wx.removeStorageSync('group-timer-prefs');
     wx.setStorageSync('group-timer-prefs', {
       groups: 3, duration: 99, rest: 7,
       items: [ { name: 'A', work: 99, rest: 7 }, { name: 'B', work: 99, rest: 7 }, { name: 'C', work: 99, rest: 7 } ]
     });
-    wx.reLaunch({ url: '/pages/home/home' });
   });
+  await mp.reLaunch('/pages/home/home');
   await sleep(1500);
   let d = await mp.evaluate(() => {
     const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
     return { duration: h.data.duration, rest: h.data.rest, items: h.data.items };
   });
-  check('prefill duration=99', d.duration === 99);
-  check('prefill rest=7', d.rest === 7);
+  // Page data stores input values as strings (bound to <input/>), so compare with String().
+  check('prefill duration=99', String(d.duration) === '99');
+  check('prefill rest=7', String(d.rest) === '7');
   check('prefill items.length=3', d.items && d.items.length === 3);
-  check('prefill item[0].work=99', d.items && d.items[0] && d.items[0].work === 99);
+  check('prefill item[0].work=99', d.items && d.items[0] && String(d.items[0].work) === '99');
   check('prefill item[0].name=A', d.items && d.items[0] && d.items[0].name === 'A');
 
   // Change values, persist, cold-start again -> should remember.
@@ -36,14 +39,14 @@ try {
     h.setData({ duration: 42, rest: 5, items: [ { name: 'Z', work: 42, rest: 5, ow: false, or: false } ] });
     h.persistPrefs();
   });
-  await mp.evaluate(() => wx.reLaunch({ url: '/pages/home/home' }));
+  await mp.reLaunch('/pages/home/home');
   await sleep(1500);
   d = await mp.evaluate(() => {
     const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
     return { duration: h.data.duration, rest: h.data.rest, items: h.data.items };
   });
-  check('persist duration=42', d.duration === 42);
-  check('persist rest=5', d.rest === 5);
+  check('persist duration=42', String(d.duration) === '42');
+  check('persist rest=5', String(d.rest) === '5');
   check('persist items.length=1', d.items && d.items.length === 1);
 
   await mp.evaluate(() => wx.removeStorageSync('group-timer-prefs'));

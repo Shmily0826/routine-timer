@@ -95,9 +95,9 @@ try {
   // ---------- Session A: 3 rounds / 3s work / 1s rest ----------
   await configure(3, 3, 1);
   let hd = await readData();
-  check('quick setup applied (3 / 3s / 1s)', hd.groups === 3 && hd.duration === 3 && hd.rest === 1,
+  check('quick setup applied (3 / 3s / 1s)', Number(hd.groups) === 3 && Number(hd.duration) === 3 && Number(hd.rest) === 1,
     `groups=${hd.groups} duration=${hd.duration} rest=${hd.rest}`);
-  const inherited = hd.items.every((it) => it.work === 3 && it.rest === 1);
+  const inherited = hd.items.every((it) => Number(it.work) === 3 && Number(it.rest) === 1);
   check('rounds inherit the new work/rest (Quick Setup fix)', inherited,
     'items=' + JSON.stringify(hd.items.map((i) => `${i.work}/${i.rest}`)));
 
@@ -189,7 +189,7 @@ try {
   // appear. Recovery-on-return (leaving without stopping / cold start) is
   // covered separately by scripts/recovery_test.mjs, which restarts the
   // project with `cli close` + `cli open` to emulate a cold start.
-  check('explicit stop discards the session (no recovery card)', rec.recovery === null,
+  check('explicit stop discards the session (no recovery card)', !rec.recovery,
     'recovery=' + JSON.stringify(rec.recovery));
 
   // ---------- Routines (last: no back button on that page) ----------

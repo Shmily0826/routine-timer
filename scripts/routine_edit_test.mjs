@@ -37,13 +37,14 @@ try {
   });
   check('edit prefill editId=r1', home.editId === 'r1');
   check('edit prefill items.length=2', home.items && home.items.length === 2);
-  check('edit prefill item[0].work=50', home.items && home.items[0] && home.items[0].work === 50);
+  check('edit prefill item[0].work=50', home.items && home.items[0] && String(home.items[0].work) === '50');
   check('edit prefill item[0].name=X', home.items && home.items[0] && home.items[0].name === 'X');
 
   // (B) modify and save back -> overwrites r1, count stays 1
+  // saveRoutine builds rounds from the `groups` count (not items.length), so set it too.
   await mp.evaluate(() => {
     const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
-    h.setData({ items: [ { name: '改了', work: 45, rest: 15, ow: true, or: true } ] });
+    h.setData({ groups: '1', items: [ { name: '改了', work: 45, rest: 15, ow: true, or: true } ] });
     h.saveRoutine(); // -> wx.reLaunch to routines page
   });
   await sleep(1500);
@@ -63,7 +64,9 @@ try {
   await sleep(1500);
   await mp.evaluate(() => {
     const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
-    h.setData({ items: [ { name: '新', work: 20, rest: 3, ow: false, or: false } ] });
+    // groups:'1' so one round is built; ow/or true so the per-item 20/3 wins over
+    // the global duration/rest defaults (ow:false means "inherit global").
+    h.setData({ groups: '1', items: [ { name: '新', work: 20, rest: 3, ow: true, or: true } ] });
     h.saveRoutine();
   });
   await sleep(1500);
