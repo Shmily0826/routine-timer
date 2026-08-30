@@ -69,5 +69,13 @@ Three harness scripts were fixed to make the suites green — all were test bugs
 - `prefs_test.mjs`: `wx.reLaunch` inside `mp.evaluate` silently no-ops when already on the target page, so prefill checks read stale in-memory data — reload via automator `mp.reLaunch` instead; string-tolerant assertions.
 - `routine_edit_test.mjs`: `saveRoutine()` builds rounds from the `groups` field, not `items.length` — tests now set `groups` consistently; `ow:false` means "inherit global duration", so the create-case sets `ow:true`; `work` string-tolerant assertion.
 
+### Product fixes (2026-08-31, HEAD after dc66c0b)
+Three fixes from the code review, each verified in the simulator (8/8 targeted checks) with all six suites green after:
+- **history.remove corrupted stored records** (`pages/history/history.ts`): the page wrote its display-shaped view objects (durations pre-formatted, `totalWorkSec`/`totalRestSec` gone) back to storage on delete. Now the raw records are kept on the page and removal filters them by id.
+- **Inconsistent round-count cap** (`pages/home/home.ts`): `onGroups` accepted up to 999 while `start`/`saveRoutine`/prefs used fallback 8 with cap 999. All round-count paths now share `parseGroups` (cap 50). Verified: typing 999 clamps to 50 in page data and prefs storage.
+- **rename() was a placeholder** (`pages/routines/routines.ts`): it appended （已改名） unconditionally. Now it opens `wx.showModal({editable:true})`, applies the trimmed non-empty content, bumps `updatedAt`. Verified via `mp.mockWxMethod('showModal', …)` including the blank-name no-op case.
+
+Harness note: the automator connection degrades after the IDE has been hammered for hours (symptoms: `timeout waiting for automator response`, stale page node after `navigateBack`, page staying on timer). `cli.bat close --project …` + `cli.bat open …` + `cli.bat auto …` restores it — smoke passed 22/22 immediately after a restart while failing 3× before. Also hardened `smoke.mjs` `configure()` with the existing retry helper.
+
 ## Real-device validation remaining
 Android physical device: background/foreground, lock screen, process kill + cold start, rapid taps, sound, silent/media volume, vibration, keep-screen-on, long session, Routine save/start/rename/delete, Continue/Discard recovery.

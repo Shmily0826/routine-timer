@@ -7,11 +7,16 @@ interface HistoryRecord { id:string; ts:number; rounds:number; totalWorkSec:numb
 
 Page({
   data:{items:[] as any[]},
+  records:[] as HistoryRecord[],
   onShow(){this.load()},
   load(){
     try{
       const x=wx.getStorageSync(HISTORY_KEY);
-      this.setData({items:Array.isArray(x)?x.slice().sort((a:any,b:any)=>b.ts-a.ts).map((r:HistoryRecord)=>({
+      // Keep the raw records for mutations: data.items below are display-shaped
+      // (durations pre-formatted), so writing them back to storage would lose
+      // totalWorkSec/totalRestSec.
+      this.records=Array.isArray(x)?x.slice().sort((a:any,b:any)=>b.ts-a.ts):[];
+      this.setData({items:this.records.map((r:HistoryRecord)=>({
         id:r.id,
         label:r.label,
         rounds:r.rounds,
@@ -19,17 +24,16 @@ Page({
         rest:fmtDur(r.totalRestSec||0),
         total:fmtDur((r.totalWorkSec||0)+(r.totalRestSec||0)),
         date:fmtDate(r.ts)
-      })):[]});
-    }catch{this.setData({items:[]})}
+      }))});
+    }catch{this.records=[];this.setData({items:[]})}
   },
   clear(){
     wx.showModal({title:'清空历史',content:'确定清空全部训练记录？此操作不可恢复。',success:(r:any)=>{if(r.confirm){wx.removeStorageSync(HISTORY_KEY);this.load();}}});
   },
   remove(e:any){
-    const i=e.currentTarget.dataset.index;
-    const list=this.data.items.slice();
-    list.splice(i,1);
-    wx.setStorageSync(HISTORY_KEY,list);
+    const rec=this.records[e.currentTarget.dataset.index];
+    if(!rec)return;
+    wx.setStorageSync(HISTORY_KEY,this.records.filter((r:HistoryRecord)=>r.id!==rec.id));
     this.load();
   }
 });

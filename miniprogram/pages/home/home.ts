@@ -2,12 +2,16 @@ import {reconcile} from '../../domain/timer';
 import {SESSION_KEY,PREFS_KEY,ROUTINES_KEY,ACTIVE_ROUNDS_KEY} from '../../domain/storage';
 
 const MAX=999;
-function parseSec(raw:any, min:number, fallback:number):number{
+// Total rounds share one cap everywhere (input, prefs reload, start, save);
+// seconds fields stay capped at MAX.
+const MAX_GROUPS=50;
+function parseSec(raw:any, min:number, fallback:number, max:number=MAX):number{
   const v=Number(raw);
   if(!Number.isFinite(v)) return fallback;
   if(v<min) return min;
-  return Math.min(MAX, v);
+  return Math.min(max, v);
 }
+function parseGroups(raw:any, fallback:number):number{return parseSec(raw,1,fallback,MAX_GROUPS);}
 
 Page({
   data:{
@@ -29,7 +33,7 @@ Page({
       const p=wx.getStorageSync(PREFS_KEY);
       if(p&&Array.isArray(p.items)&&p.items.length){
         return {
-          groups:parseSec(p.groups,1,8),
+          groups:parseGroups(p.groups,8),
           duration:parseSec(p.duration,1,30),
           rest:parseSec(p.rest,0,0),
           items:p.items.slice(0,50).map((x:any,i:number)=>({
@@ -47,7 +51,7 @@ Page({
   persistPrefs(){
     try{
       wx.setStorageSync(PREFS_KEY,{
-        groups:parseSec(this.data.groups,1,8),
+        groups:parseGroups(this.data.groups,8),
         duration:parseSec(this.data.duration,1,30),
         rest:parseSec(this.data.rest,0,0),
         items:this.data.items.map((x:any)=>({name:x.name||'',work:parseSec(x.work,1,30),rest:parseSec(x.rest,0,0)}))
@@ -72,7 +76,7 @@ Page({
   },
 
   saveRoutine(){
-    const n=parseSec(this.data.groups,1,8);
+    const n=parseGroups(this.data.groups,8);
     const duration=parseSec(this.data.duration,1,30);
     const rest=parseSec(this.data.rest,0,0);
     const rounds=Array.from({length:n},(_,i)=>{
@@ -113,7 +117,7 @@ Page({
   continue(){wx.navigateTo({url:'/pages/timer/timer'});},
 
   onGroups(e:any){
-    const n=parseSec(e.detail.value,1,50);
+    const n=parseGroups(e.detail.value,8);
     this.setData({groups:String(n),items:Array.from({length:n},(_,i)=>this.data.items[i]||{name:`动作 ${i+1}`,work:this.data.duration,rest:this.data.rest,ow:false,or:false})});
     this.persistPrefs();
   },
@@ -141,7 +145,7 @@ Page({
   },
 
   start(){
-    const n=parseSec(this.data.groups,1,8);
+    const n=parseGroups(this.data.groups,8);
     const duration=parseSec(this.data.duration,1,30);
     const rest=parseSec(this.data.rest,0,0);
     const rounds=Array.from({length:n},(_,i)=>{

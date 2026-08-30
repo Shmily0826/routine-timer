@@ -65,10 +65,16 @@ async function poll(predicate, timeoutMs = 15000, stepMs = 200) {
 }
 
 async function configure(groups, work, rest) {
-  const ins = await (await mp.currentPage()).$$('input');
-  await ins[0].input(String(groups));
-  await ins[1].input(String(work));
-  await ins[2].input(String(rest));
+  // The automator connection occasionally times out mid-run ("timeout waiting
+  // for automator response"); route every step through the retry helper so one
+  // hiccup doesn't abort the whole suite.
+  await retry('configure(inputs)', async () => {
+    const page = await mp.currentPage();
+    const ins = await page.$$('input');
+    await ins[0].input(String(groups));
+    await ins[1].input(String(work));
+    await ins[2].input(String(rest));
+  }, 3, 1000);
   await sleep(500);
 }
 async function stopToHome() {
