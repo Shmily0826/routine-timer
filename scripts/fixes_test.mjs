@@ -119,11 +119,43 @@ try {
   rl = await mp.evaluate(() => wx.getStorageSync('group-timer-routines'));
   check('save numbers past max existing (Routine 4, not 3)', rl[2] && rl[2].name === 'Routine 4', JSON.stringify(rl.map((r) => r.name)));
 
+  // ---------- recovery card disappears after explicit stop ----------
+  // Regression: stop() removed SESSION_KEY but home.onShow only had an
+  // if(s){...} branch, so the recovery card stayed rendered. Tapping it then
+  // started a brand-new session instead of restoring anything.
+  await mp.evaluate(() => {
+    wx.setStorageSync('group-timer-session', {
+      status: 'running', phase: 'work', currentRoundIndex: 0,
+      rounds: [{ name: '回归测试', workSec: 300, restSec: 0 }],
+      phaseStartedAt: Date.now(), endTimestamp: Date.now() + 300000,
+      startedAt: Date.now(), updatedAt: Date.now()
+    });
+    wx.setStorageSync('active-rounds', [{ name: '回归测试', workSec: 300, restSec: 0 }]);
+  });
+  await mp.reLaunch('/pages/home/home');
+  await sleep(1500);
+  page = await mp.currentPage();
+  let contBtn = await findBtn(page, '继续训练');
+  check('recovery card shown for stored session', !!contBtn, 'button not found');
+  await contBtn.tap();
+  await sleep(1200);
+  page = await mp.currentPage();
+  const stopBtn = await findBtn(page, '停止 / 退出');
+  check('navigated to timer page after continue', !!stopBtn, 'current page=' + (await page.path?.()));
+  await stopBtn.tap();
+  await sleep(1200);
+  hd = await homeData();
+  check('recovery cleared after stop', hd && hd.recovery === null, 'recovery=' + JSON.stringify(hd && hd.recovery));
+  page = await mp.currentPage();
+  contBtn = await findBtn(page, '继续训练');
+  check('recovery card no longer rendered after stop', !contBtn, 'card still present');
+
   await mp.evaluate(() => {
     wx.removeStorageSync('group-timer-history');
     wx.removeStorageSync('group-timer-routines');
     wx.removeStorageSync('group-timer-prefs');
     wx.removeStorageSync('active-rounds');
+    wx.removeStorageSync('group-timer-session');
   });
 } catch (e) {
   console.log('RAW ERROR:\n' + ((e && (e.stack || e.message)) || String(e)));

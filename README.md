@@ -27,7 +27,7 @@
 - `npm test`：PASS，10/10（Timer Engine 7，storage/Routine 3；新增 stale-session→completed 边界回归测试）。
 - `npm run build:wechat`：PASS，生成页面与 domain 的小程序 `.js` 文件。
 - WeChat DevTools：真实 `cli open --project D:\CODE\project\Timer` PASS。唯一的黄色提示 `routeTo appLaunch timeout` 已定位为缺少 `app.js` 入口，新增 `miniprogram/app.ts` 后最新 WeappLog 中已无该警告与 ERROR。
-- 模拟器冒烟（自动化端口 + `miniprogram-automator`，无需手动点击）：八个 harness 全绿 —— `smoke` **22/22**、`recovery` **8/8**、`prefs` **8/8**、`routine-edit` **12/12**、`routine-dup` **6/6**、`history` **8/8**、`fixes` **9/9**、`edge` **11/11**（2026-08-31 复验，详见 `TEST_REPORT.md`）。覆盖倒计时、work→rest、进组、暂停/恢复、上一组/下一组、完成、再来一次、停止返回、Routine 保存/编辑/复制/删除、偏好持久化、训练历史。已修复 Quick Setup 的训练/休息秒数不生效的 bug。恢复卡片（未停止就离开）已由 `recovery` harness 覆盖（8/8）。
+- 模拟器冒烟（自动化端口 + `miniprogram-automator`，无需手动点击）：八个 harness 全绿 —— `smoke` **22/22**、`recovery` **8/8**、`prefs` **8/8**、`routine-edit` **12/12**、`routine-dup` **6/6**、`history` **8/8**、`fixes` **12/12**（2026-08-31 后新增 3 个回归断言，含停止后恢复卡片清理；待 9420 恢复后重跑确认）、`edge` **11/11**（2026-08-31 复验，详见 `TEST_REPORT.md`）。覆盖倒计时、work→rest、进组、暂停/恢复、上一组/下一组、完成、再来一次、停止返回、Routine 保存/编辑/复制/删除、偏好持久化、训练历史。已修复 Quick Setup 的训练/休息秒数不生效的 bug。恢复卡片（未停止就离开）已由 `recovery` harness 覆盖（8/8）。
 - `edge` 套件补的是其它套件没走的边界路径：休息 0 秒会跳过 rest 相位直接进下一组（不会卡住或自旋）、完成时只写**一条**历史记录且字段正确、完成后的 250ms tick 不会重复追加记录、训练历史上限 100 条（新的在前、最旧的被丢弃）。
 
 ### 真机验证（Xiaomi 15 Pro / Android 16 / HyperOS V816，adb 驱动）

@@ -60,7 +60,7 @@ pulls in stub `@types/*` packages (`xtend`, `xml2js`) that broke `tsc` with TS26
 Re-ran the full gate after the real-device work landed:
 - `npm run typecheck` PASS; `npm test` 10/10 PASS.
 - DevTools compile re-verified: `cli open` → simulator renders Home/Timer/Routines, real IDE compile OK.
-- All six automator suites now green: `smoke` **22/22**, `recovery` **8/8**, `prefs` **8/8**, `routine-edit` **12/12**, `routine-dup` **6/6**, `history` **8/8**.
+- All automator suites green at the time: `smoke` **22/22**, `recovery` **8/8**, `prefs` **8/8**, `routine-edit` **12/12**, `routine-dup` **6/6**, `history` **8/8**, `fixes` **9/9** (later expanded to **12/12** in commit `7e1b1b9` with the stop/residual-card regression; rerun pending after the 9420 port is restored).
 - Console audit with `console.error` / `wx.onError` / `wx.onUnhandledRejection` hooks installed before a clean full timer session (3×3s+1s): **0 errors**, session completed correctly. The 14 errors visible in the DevTools console earlier were accumulated during harness runs (intentional navigation exceptions injected by the tests), not product issues.
 - Sound/vibration/keepScreenOn runtime: `cue()` (vibrateShort + InnerAudioContext) fired on every phase transition during the clean run with no runtime errors; physical perception remains device-verified only (see README 真机验证).
 
@@ -74,6 +74,11 @@ Three fixes from the code review, each verified in the simulator (8/8 targeted c
 - **history.remove corrupted stored records** (`pages/history/history.ts`): the page wrote its display-shaped view objects (durations pre-formatted, `totalWorkSec`/`totalRestSec` gone) back to storage on delete. Now the raw records are kept on the page and removal filters them by id.
 - **Inconsistent round-count cap** (`pages/home/home.ts`): `onGroups` accepted up to 999 while `start`/`saveRoutine`/prefs used fallback 8 with cap 999. All round-count paths now share `parseGroups` (cap 50). Verified: typing 999 clamps to 50 in page data and prefs storage.
 - **rename() was a placeholder** (`pages/routines/routines.ts`): it appended （已改名） unconditionally. Now it opens `wx.showModal({editable:true})`, applies the trimmed non-empty content, bumps `updatedAt`. Verified via `mp.mockWxMethod('showModal', …)` including the blank-name no-op case.
+
+### Product fixes (2026-08-31, commit `7e1b1b9`)
+Found and fixed during real-device testing:
+- **Stale recovery card after stop** (`pages/home/home.ts`): `stop()` removes `SESSION_KEY` and navigates back, but `home.onShow` only had an `if(s){...}` branch, so the recovery card stayed on screen. Tapping it then started a brand-new session with the current home inputs instead of restoring anything. Added an `else` branch that sets `recovery` to `null` when storage is empty. Regression added to `fixes_test.mjs` (12 targeted checks total; rerun pending after 9420 recovery).
+- **Groups input "1 prefix" UX bug** (`pages/home/home.ts`): `onGroups` was normalising on every keystroke, so clearing the field clamped `Number('')===0` up to 1 and retyping produced "12" instead of "2". Changed `onGroups` to store the raw string and only resize `items[]` when the normalised number actually changes.
 
 Harness note: the automator connection degrades after the IDE has been hammered for hours (symptoms: `timeout waiting for automator response`, stale page node after `navigateBack`, page staying on timer). `cli.bat close --project …` + `cli.bat open …` + `cli.bat auto …` restores it — smoke passed 22/22 immediately after a restart while failing 3× before. Also hardened `smoke.mjs` `configure()` with the existing retry helper.
 
