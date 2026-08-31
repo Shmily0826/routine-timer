@@ -84,5 +84,19 @@ Harness note: the automator connection degrades after the IDE has been hammered 
 
 Harness note (updated): after ~1h of suite hammering the IDE starts silently dropping taps and `wx.reLaunch`-via-evaluate no-ops widen; `cli.bat close/open/auto` restores crisp behavior — rerun the suites after an IDE restart before suspecting product regressions.
 
+### Edge-case suite: zero-rest, history write, 100-record cap (2026-08-31)
+New harness `scripts/edge_test.mjs` (`npm run edge`, wired into `npm run verify`) covering paths no other suite exercised. **11/11 PASS**, no product bugs found:
+- **rest = 0s is skipped, not parked** — a 2-round session with `restSec: 0` advances straight from round 1 work to round 2 work. `reconcile()` only enters a rest phase when `restSec > 0`, so a zero-length phase cannot spin the advance loop or stall the session.
+- **completion writes exactly one history record** — a 2 × 1s session completes and appends one record with `rounds=2 / totalWorkSec=2 / totalRestSec=0 / label=甲`.
+- **no duplicate records after completion** — ~10 further 250ms ticks on an already-completed session append nothing (the `recorded` guard works).
+- **history capped at 100** — with 100 existing records, a new completion keeps exactly 100: newest first, oldest dropped.
+
+Harness note: the timer page's `onHide()` persists the live session back to storage, so every case navigates away to home, injects storage, then re-enters the timer. Injecting before leaving gets overwritten by that persist.
+
 ## Real-device validation remaining
-Android physical device: background/foreground, lock screen, process kill + cold start, rapid taps, sound, silent/media volume, vibration, keep-screen-on, long session, Routine save/start/rename/delete, Continue/Discard recovery.
+Already verified on the Xiaomi 15 Pro (see README 真机验证): keep-screen-on, lock-screen / background timing, automatic phase cue, recovery card (Continue / Discard), and the audible cue.
+Still outstanding:
+- **vibration perception** — blocked by the device setting `haptic_feedback_enabled=0`, not by code. Needs 设置 → 声音与触感 → 触感反馈 enabled, then a re-test.
+- **process kill + cold start** — never tested; the key recovery path for a timer.
+- **iOS** — mute-switch fallback (`setInnerAudioOption({obeyMuteSwitch:false})`) is coded but unverified on a real iPhone.
+- rapid taps, long session, silent / low media volume edge cases.

@@ -4,7 +4,7 @@
 
 ## 本地运行
 
-安装 Node.js 依赖后运行 `npm install`、`npm run typecheck`、`npm test` 和 `npm run build:wechat`。使用微信开发者工具打开仓库根目录，项目配置的 `miniprogramRoot` 为 `miniprogram/`；当前配置使用开发 AppID，真机能力仍需按账号权限验证。
+安装 Node.js 依赖后运行 `npm install`、`npm run typecheck`、`npm test` 和 `npm run build:wechat`。使用微信开发者工具打开仓库根目录，项目配置的 `miniprogramRoot` 为 `miniprogram/`；`project.config.json` 已配置正式 AppID `wxbd0de427d588fa95`，真机调试、预览与上传均可用。
 
 生产逻辑（单一来源）位于：
 - Timer Engine：`miniprogram/domain/timer.ts`
@@ -27,7 +27,8 @@
 - `npm test`：PASS，10/10（Timer Engine 7，storage/Routine 3；新增 stale-session→completed 边界回归测试）。
 - `npm run build:wechat`：PASS，生成页面与 domain 的小程序 `.js` 文件。
 - WeChat DevTools：真实 `cli open --project D:\CODE\project\Timer` PASS。唯一的黄色提示 `routeTo appLaunch timeout` 已定位为缺少 `app.js` 入口，新增 `miniprogram/app.ts` 后最新 WeappLog 中已无该警告与 ERROR。
-- 模拟器冒烟（自动化端口 + `miniprogram-automator`，无需手动点击）：六个 harness 全绿 —— `smoke` **22/22**、`recovery` **8/8**、`prefs` **8/8**、`routine-edit` **12/12**、`routine-dup` **6/6**、`history` **8/8**（2026-08-31 复验，详见 `TEST_REPORT.md`）。覆盖倒计时、work→rest、进组、暂停/恢复、上一组/下一组、完成、再来一次、停止返回、Routine 保存/编辑/复制/删除、偏好持久化、训练历史。已修复 Quick Setup 的训练/休息秒数不生效的 bug。恢复卡片（未停止就离开）已由 `recovery` harness 覆盖（8/8）。
+- 模拟器冒烟（自动化端口 + `miniprogram-automator`，无需手动点击）：八个 harness 全绿 —— `smoke` **22/22**、`recovery` **8/8**、`prefs` **8/8**、`routine-edit` **12/12**、`routine-dup` **6/6**、`history` **8/8**、`fixes` **9/9**、`edge` **11/11**（2026-08-31 复验，详见 `TEST_REPORT.md`）。覆盖倒计时、work→rest、进组、暂停/恢复、上一组/下一组、完成、再来一次、停止返回、Routine 保存/编辑/复制/删除、偏好持久化、训练历史。已修复 Quick Setup 的训练/休息秒数不生效的 bug。恢复卡片（未停止就离开）已由 `recovery` harness 覆盖（8/8）。
+- `edge` 套件补的是其它套件没走的边界路径：休息 0 秒会跳过 rest 相位直接进下一组（不会卡住或自旋）、完成时只写**一条**历史记录且字段正确、完成后的 250ms tick 不会重复追加记录、训练历史上限 100 条（新的在前、最旧的被丢弃）。
 
 ### 真机验证（Xiaomi 15 Pro / Android 16 / HyperOS V816，adb 驱动）
 
@@ -36,8 +37,9 @@
 | 屏幕常亮 keepScreenOn | 临时把屏幕超时改为 15s，静置 32s 后读 `mWakefulness` | ✅ 保持 `Awake`，未熄屏 |
 | 自动阶段提示（work→rest / rest→work / 完成） | 临时在计时页插桩显示 cue 计数，让计时器自动跑完 8 组 | ✅ 计数 0 → 17，三种切换均触发 `cue()` |
 | 锁屏 / 后台计时 | adb 锁屏 15s 后唤醒，对比剩余时间 | ✅ 未归零、未冻住，继续跑完并显示完成汇总 |
-| 声音 / 震动的**实际感知** | — | ⏳ 待确认：插桩只证明 `cue()` 执行，未证明用户听到 / 感到 |
-| 恢复卡片（未停止就离开） | — | ⏳ 待真机验证（模拟器 `recovery` 8/8 已通过） |
+| 提示音的**实际感知** | 用户主观确认 | ✅ 用户在真机上听到「滴」（`obeyMuteSwitch:false` 生效） |
+| 震动的**实际感知** | 用户主观确认 | ⏳ 未确认 —— 根因是系统 `haptic_feedback_enabled=0`（非代码 / 非微信权限问题），需用户在 设置 → 声音与触感 打开「触感反馈」后复测 |
+| 恢复卡片（未停止就离开） | 中途退出再进入小程序 | ✅ 真机显示「发现未完成的训练」（模拟器 `recovery` 8/8 亦通过） |
 | iOS | — | ⏳ 代码已加 `wx.setInnerAudioOption({obeyMuteSwitch:false})`，待真机验证；静音键理论上不再屏蔽提示音 |
 
 自动提示的修正是 commit `abfaf2b`：`render()` 内检测 `phase` / `currentRoundIndex` / `completed` 变化后自动触发 `cue()`，并去掉 `goNext` 里重复的显式调用。
