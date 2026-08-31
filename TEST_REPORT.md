@@ -93,10 +93,15 @@ New harness `scripts/edge_test.mjs` (`npm run edge`, wired into `npm run verify`
 
 Harness note: the timer page's `onHide()` persists the live session back to storage, so every case navigates away to home, injects storage, then re-enters the timer. Injecting before leaving gets overwritten by that persist.
 
-## Real-device validation remaining
-Already verified on the Xiaomi 15 Pro (see README 真机验证): keep-screen-on, lock-screen / background timing, automatic phase cue, recovery card (Continue / Discard), and the audible cue.
+## Real-device validation (Xiaomi 15 Pro / Android 16 / HyperOS V816, adb-driven)
+Updated 2026-08-31. Items verified since the last report:
+- **Process kill + cold start** — `am force-stop com.tencent.mm` then relaunch the dev-version mini program from WeChat's recent list. Two independent runs showed the restored countdown matching the wall-clock-theoretical remainder (07:53/07:55 and 04:52/04:54), proving `reconcile()`'s timestamp-driven recovery survives a full process restart.
+- **Hot resume** — HOME button, wait 53 s, reopen the mini program from recent list; display was 02:16 vs theoretical 02:18. WeChat kept the page stack and the timer page's `onShow` → `render()` resumed correctly.
+- **Auto phase advance + zero-rest skip** — a 999 s work round ran out and advanced straight to the next work round (rest set to 0), with no stall or duplicate rest phase.
+- **Completion summary + history write** — a 1 × 5 s session completed, the summary page showed `训练5秒－休息0秒 / 总时长5秒`, and the history page listed the matching record first.
+- **Bug found & fixed during validation** — tapping 停止／退出 removed `SESSION_KEY` but left the recovery card rendered. `home.onShow` only had an `if(s){...}` branch, so when storage became empty the card stayed on screen and 继续训练 would silently start a brand-new session. Added an `else { this.setData({recovery:null}); }` branch to clear the stale card. This also explains the single anomalous cold-start reading (16:34) from an earlier run: the stale card was tapped, which navigated to the timer page and created a fresh session.
+
 Still outstanding:
 - **vibration perception** — blocked by the device setting `haptic_feedback_enabled=0`, not by code. Needs 设置 → 声音与触感 → 触感反馈 enabled, then a re-test.
-- **process kill + cold start** — never tested; the key recovery path for a timer.
 - **iOS** — mute-switch fallback (`setInnerAudioOption({obeyMuteSwitch:false})`) is coded but unverified on a real iPhone.
 - rapid taps, long session, silent / low media volume edge cases.

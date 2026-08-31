@@ -109,6 +109,9 @@ Page({
         const r=reconcile(s,Date.now()).session;
         if(r.status==='completed'){wx.removeStorageSync(SESSION_KEY);this.setData({recovery:null});}
         else{wx.setStorageSync(SESSION_KEY,r);this.setData({recovery:{round:r.currentRoundIndex+1,name:r.rounds[r.currentRoundIndex]?.name||''}});}
+      }else{
+        // Session was explicitly stopped; don't leave a stale recovery card on screen.
+        if(this.data.recovery){this.setData({recovery:null});}
       }
     }catch{}
   },
@@ -117,8 +120,21 @@ Page({
   continue(){wx.navigateTo({url:'/pages/timer/timer'});},
 
   onGroups(e:any){
-    const n=parseGroups(e.detail.value,8);
-    this.setData({groups:String(n),items:Array.from({length:n},(_,i)=>this.data.items[i]||{name:`动作 ${i+1}`,work:this.data.duration,rest:this.data.rest,ow:false,or:false})});
+    // Store the raw text like the seconds fields do. Normalising here made the
+    // field impossible to empty: clearing it clamped Number('')===0 up to min 1,
+    // so retyping '2' produced '12'. Normalisation happens on use instead.
+    const raw=e.detail.value;
+    const patch:any={groups:raw};
+    // Keep the per-group rows in sync with a *typed* number only; while the field
+    // is momentarily empty we must not truncate `items`, or custom names typed
+    // for later groups would be lost mid-edit.
+    if(raw!==''){
+      const n=parseGroups(raw,8);
+      if(n!==this.data.items.length){
+        patch.items=Array.from({length:n},(_,i)=>this.data.items[i]||{name:`动作 ${i+1}`,work:this.data.duration,rest:this.data.rest,ow:false,or:false});
+      }
+    }
+    this.setData(patch);
     this.persistPrefs();
   },
   onDuration(e:any){

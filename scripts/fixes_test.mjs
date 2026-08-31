@@ -57,8 +57,27 @@ try {
     const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
     return { groups: h.data.groups, stored: wx.getStorageSync('group-timer-prefs').groups };
   });
-  check('groups 999 clamps to 50 in page data', String(hd.groups) === '50', 'groups=' + hd.groups);
+  check('groups 999 stays editable in the field (raw text kept)', String(hd.groups) === '999', 'groups=' + hd.groups);
   check('groups 999 clamps to 50 in prefs storage', Number(hd.stored) === 50, 'stored=' + hd.stored);
+
+  // ---------- groups field can be emptied and retyped ----------
+  // Regression: clearing the field used to clamp Number('')===0 up to min 1, so
+  // the field snapped back to "1" and retyping produced "12" instead of "2".
+  const gIn = await page.$$('input');
+  await gIn[0].input('');
+  await sleep(500);
+  let gv = await mp.evaluate(() => {
+    const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
+    return h ? h.data.groups : null;
+  });
+  check('groups field can be cleared (stays empty, not snapped to 1)', gv === '', 'groups=' + JSON.stringify(gv));
+  await gIn[0].input('2');
+  await sleep(500);
+  gv = await mp.evaluate(() => {
+    const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
+    return h ? h.data.groups : null;
+  });
+  check('retyping after clear yields 2, not 12', gv === '2', 'groups=' + JSON.stringify(gv));
 
   // ---------- rename via editable modal ----------
   await mp.evaluate(() => {
