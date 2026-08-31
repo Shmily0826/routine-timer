@@ -77,5 +77,12 @@ Three fixes from the code review, each verified in the simulator (8/8 targeted c
 
 Harness note: the automator connection degrades after the IDE has been hammered for hours (symptoms: `timeout waiting for automator response`, stale page node after `navigateBack`, page staying on timer). `cli.bat close --project …` + `cli.bat open …` + `cli.bat auto …` restores it — smoke passed 22/22 immediately after a restart while failing 3× before. Also hardened `smoke.mjs` `configure()` with the existing retry helper.
 
+### Countdown buzz + double completion cue (2026-08-31)
+- **3-2-1 countdown buzz**: while running with ≤3s left in a phase, each second now fires `wx.vibrateShort({type:'light'})` (keyed by phase/round/second, so one buzz per second, none while paused). Phase switches keep the heavier cue (sound + `medium`). Verified in-simulator with a vibrateShort spy: paused session in the window → 0 buzzes; resume from 2s → exactly 2 lights then completion.
+- **Double completion cue fixed**: on completion `cue()` fired twice — once from the `_cueKey` transition and once from an explicit call in the completed branch (the latter also re-fired on every later `onShow` render). Removed the explicit call; completion now cues exactly once. Verified: `["light","light","medium"]` for a 2s resume-to-completion run.
+- **smoke.mjs hardening for lost taps**: the IDE silently drops automator taps that land during the timer page's 250ms re-render, and its page node lags behind `navigateBack`. Added `tapUntil` (re-tap until the page data reflects the effect, used for pause/resume) and a home-poll in `stopToHome`. With those, smoke is deterministic on a fresh IDE.
+
+Harness note (updated): after ~1h of suite hammering the IDE starts silently dropping taps and `wx.reLaunch`-via-evaluate no-ops widen; `cli.bat close/open/auto` restores crisp behavior — rerun the suites after an IDE restart before suspecting product regressions.
+
 ## Real-device validation remaining
 Android physical device: background/foreground, lock screen, process kill + cold start, rapid taps, sound, silent/media volume, vibration, keep-screen-on, long session, Routine save/start/rename/delete, Continue/Discard recovery.

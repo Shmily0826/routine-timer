@@ -49,6 +49,18 @@ async function tapSel(sel, label) {
     await el.tap();
   });
 }
+// Tap and re-tap (up to 5x) until the page data actually reflects the effect —
+// guards against taps lost to the 250ms re-render cycle.
+async function tapUntil(index, label, predicate, attempts = 5, delay = 600) {
+  for (let i = 1; i <= attempts; i++) {
+    await tap(index, label);
+    await sleep(delay);
+    const d = await tryData();
+    if (d && predicate(d)) return d;
+    console.log(`  ..tapUntil ${label} ${i}/${attempts}: effect not observed yet`);
+  }
+  throw new Error(`tapUntil(${label}): effect never observed after ${attempts} taps`);
+}
 // Tolerant single-attempt read: the page node transiently disappears.
 async function tryData() {
   try { return await (await mp.currentPage()).data(); } catch (_) { return null; }
@@ -80,7 +92,13 @@ async function configure(groups, work, rest) {
 async function stopToHome() {
   const btns = await (await mp.currentPage()).$$('button');
   await btns[btns.length - 1].tap(); // 停止/退出 on the timer page
-  await sleep(1800);
+  // Poll until the back-navigation actually landed on Home — the automator page
+  // node can keep reporting the timer page for a while after navigateBack.
+  for (let i = 1; i <= 8; i++) {
+    await sleep(700);
+    try { const p = await mp.currentPage(); if (p && p.path.includes('home')) return p; } catch (_) {}
+    console.log(`  ..waiting for home after stop (${i})`);
+  }
   return mp.currentPage();
 }
 
@@ -152,9 +170,11 @@ try {
   await sleep(1500);
   await configure(3, 60, 5);
   await tapSel('button.start', 'start C');
-  await sleep(1200);
-
-  await tap(0, 'pause');
+  await sleep(2000);
+  // The page re-renders every 250ms and the automator tap can land on a node
+  // that is about to be re-created (the event is silently lost). Like a real
+  // user, re-tap until the state actually changes.
+  await tapUntil(0, 'pause', (d) => d.paused === true);
   await sleep(400);
   const frozen = (await readData()).display;
   await sleep(1100);
@@ -162,7 +182,7 @@ try {
   check('pause freezes countdown', stillPaused.paused === true && stillPaused.display === frozen,
     `paused=${stillPaused.paused} ${frozen} -> ${stillPaused.display}`);
 
-  await tap(0, 'resume');
+  await tapUntil(0, 'resume', (d) => d.paused === false);
   await sleep(1100);
   let resumed = await readData();
   check('resume restarts countdown', resumed.paused === false && resumed.display !== frozen,
