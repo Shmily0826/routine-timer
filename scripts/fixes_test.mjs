@@ -25,6 +25,20 @@ async function homeData() {
     return h ? h.data : null;
   });
 }
+// Navigation under automation is not instant: measured 700ms still on the old
+// page, 1500ms already on the new one. A fixed sleep that sits near that
+// boundary flakes, so poll instead and only fail once the budget is gone.
+async function waitForPage(substr, timeoutMs = 6000) {
+  const deadline = Date.now() + timeoutMs;
+  let last = '(none)';
+  while (Date.now() < deadline) {
+    const p = await mp.currentPage();
+    last = (p && p.path) || '(none)';
+    if (last.includes(substr)) return p;
+    await sleep(200);
+  }
+  return null;
+}
 
 try {
   // ---------- history.remove keeps raw record shape ----------
@@ -138,14 +152,40 @@ try {
   let contBtn = await findBtn(page, '继续训练');
   check('recovery card shown for stored session', !!contBtn, 'button not found');
   await contBtn.tap();
-  await sleep(1200);
-  page = await mp.currentPage();
-  const stopBtn = await findBtn(page, '停止 / 退出');
-  check('navigated to timer page after continue', !!stopBtn, 'current page=' + (await page.path?.()));
-  await stopBtn.tap();
-  await sleep(1200);
-  hd = await homeData();
-  check('recovery cleared after stop', hd && hd.recovery === null, 'recovery=' + JSON.stringify(hd && hd.recovery));
+  const timerPage = await waitForPage('pages/timer/timer');
+  page = timerPage || (await mp.currentPage());
+  // waitForPage returns as soon as the route changes, which can still be mid
+  // transition: a tap at that moment lands on the outgoing page and silently
+  // does nothing. Wait until the timer page actually holds its session.
+  let ready = false;
+  for (let i = 0; i < 25; i++) {
+    const d = await mp.evaluate(() => {
+      const t = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/timer/timer');
+      // `session` is a page-instance field, not part of data. `display` is
+      // written by render(), so a non-empty string proves onLoad finished.
+      return t ? typeof t.data.display === 'string' && t.data.display.length > 0 : false;
+    });
+    if (d) { ready = true; break; }
+    await sleep(200);
+  }
+  check('timer page finished onLoad before tapping', ready, 'display never rendered on timer page');
+  // render() runs before the navigation transition finishes. A tap delivered
+  // mid-transition goes to the outgoing page and is silently dropped — measured
+  // by watching this exact assertion toggle with and without the wait.
+  await sleep(2000);
+  const stopBtn = timerPage ? await findBtn(timerPage, '停止 / 退出') : null;
+  check('navigated to timer page after continue', !!stopBtn, 'current page=' + page.path);
+  if (stopBtn) await stopBtn.tap();
+  // Poll the actual condition rather than sleeping: after navigateBack the home
+  // page still has to run onShow before recovery is cleared, and a fixed sleep
+  // that races that is exactly how this assertion flaked before.
+  let cleared = false;
+  for (let i = 0; i < 30; i++) {
+    await sleep(200);
+    hd = await homeData();
+    if (hd && hd.recovery === null) { cleared = true; break; }
+  }
+  check('recovery cleared after stop', cleared, 'recovery=' + JSON.stringify(hd && hd.recovery));
   page = await mp.currentPage();
   contBtn = await findBtn(page, '继续训练');
   check('recovery card no longer rendered after stop', !contBtn, 'card still present');
