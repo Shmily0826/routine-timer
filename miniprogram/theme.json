@@ -1,0 +1,32 @@
+{
+  "light": {
+    "bgPage": "#f4f7fb",
+    "fgPrimary": "#172033",
+    "fgMuted": "#637083",
+    "bgCard": "#ffffff",
+    "shadowCard": "#12233a12",
+    "borderRow": "#edf0f5",
+    "borderInput": "#e4e8ef",
+    "accent": "#3157d8",
+    "accentFg": "#ffffff",
+    "accentSoft": "#eef2ff",
+    "accentSoftFg": "#3157d8",
+    "accentLink": "#3457d5",
+    "success": "#16805c"
+  },
+  "dark": {
+    "bgPage": "#0b1220",
+    "fgPrimary": "#e6edf7",
+    "fgMuted": "#93a3ba",
+    "bgCard": "#151f33",
+    "shadowCard": "#0000004d",
+    "borderRow": "#223049",
+    "borderInput": "#2a3a58",
+    "accent": "#4f74e3",
+    "accentFg": "#ffffff",
+    "accentSoft": "#1c2942",
+    "accentSoftFg": "#8fb0ff",
+    "accentLink": "#7fa0ff",
+    "success": "#34d399"
+  }
+}
