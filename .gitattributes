@@ -1,0 +1,5 @@
+# cmd.exe parses batch files line by line; LF-only endings make goto/labels and
+# parenthesised blocks behave unpredictably. Pin CRLF inside the repository so
+# the files stay correct however they are obtained (clone, zip download).
+*.bat text eol=crlf
+*.cmd text eol=crlf
