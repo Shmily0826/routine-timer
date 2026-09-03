@@ -9,14 +9,31 @@
 import automator from 'miniprogram-automator';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-process.on('unhandledRejection', async (e) => { try { await mp?.disconnect?.(); } catch (_) {} console.error('UNHANDLED REJECTION:', e && e.message); process.exit(1); });
-let pass = 0, fail = 0;
-const check = (name, cond, detail = '') => { if (cond) { pass++; console.log('PASS ' + name); } else { fail++; console.log('FAIL ' + name + '  :: ' + detail); } };
+process.on('unhandledRejection', async (e) => {
+  try {
+    await mp?.disconnect?.();
+  } catch (_) {}
+  console.error('UNHANDLED REJECTION:', e && e.message);
+  process.exit(1);
+});
+let pass = 0,
+  fail = 0;
+const check = (name, cond, detail = '') => {
+  if (cond) {
+    pass++;
+    console.log('PASS ' + name);
+  } else {
+    fail++;
+    console.log('FAIL ' + name + '  :: ' + detail);
+  }
+};
 
 const mp = await automator.connect({ wsEndpoint: 'ws://127.0.0.1:9420' });
 async function findBtn(page, text) {
   const btns = await page.$$('button');
-  for (const b of btns) { if (text === await b.text()) return b; }
+  for (const b of btns) {
+    if (text === (await b.text())) return b;
+  }
   return null;
 }
 async function homeData() {
@@ -45,7 +62,7 @@ try {
   await mp.evaluate(() => {
     wx.setStorageSync('group-timer-history', [
       { id: 'h1', ts: 1000, rounds: 2, totalWorkSec: 60, totalRestSec: 30, label: '甲' },
-      { id: 'h2', ts: 2000, rounds: 3, totalWorkSec: 90, totalRestSec: 15, label: '乙' }
+      { id: 'h2', ts: 2000, rounds: 3, totalWorkSec: 90, totalRestSec: 15, label: '乙' },
     ]);
   });
   await mp.reLaunch('/pages/history/history');
@@ -56,9 +73,16 @@ try {
   await sleep(1200);
   let hist = await mp.evaluate(() => wx.getStorageSync('group-timer-history'));
   check('history remove: 1 record left', hist.length === 1, JSON.stringify(hist));
-  check('history remove: removed the tapped newest record (乙/h2)', hist[0] && hist[0].id === 'h1', JSON.stringify(hist));
-  check('history remove: remaining record keeps RAW fields (totalWorkSec=60, 甲)',
-    hist[0] && hist[0].totalWorkSec === 60 && hist[0].totalRestSec === 30 && hist[0].label === '甲', JSON.stringify(hist[0]));
+  check(
+    'history remove: removed the tapped newest record (乙/h2)',
+    hist[0] && hist[0].id === 'h1',
+    JSON.stringify(hist),
+  );
+  check(
+    'history remove: remaining record keeps RAW fields (totalWorkSec=60, 甲)',
+    hist[0] && hist[0].totalWorkSec === 60 && hist[0].totalRestSec === 30 && hist[0].label === '甲',
+    JSON.stringify(hist[0]),
+  );
 
   // ---------- round-count clamp ----------
   await mp.reLaunch('/pages/home/home');
@@ -71,8 +95,16 @@ try {
     const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
     return { groups: h.data.groups, stored: wx.getStorageSync('group-timer-prefs').groups };
   });
-  check('groups 999 stays editable in the field (raw text kept)', String(hd.groups) === '999', 'groups=' + hd.groups);
-  check('groups 999 clamps to 50 in prefs storage', Number(hd.stored) === 50, 'stored=' + hd.stored);
+  check(
+    'groups 999 stays editable in the field (raw text kept)',
+    String(hd.groups) === '999',
+    'groups=' + hd.groups,
+  );
+  check(
+    'groups 999 clamps to 50 in prefs storage',
+    Number(hd.stored) === 50,
+    'stored=' + hd.stored,
+  );
 
   // ---------- groups field can be emptied and retyped ----------
   // Regression: clearing the field used to clamp Number('')===0 up to min 1, so
@@ -84,7 +116,11 @@ try {
     const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
     return h ? h.data.groups : null;
   });
-  check('groups field can be cleared (stays empty, not snapped to 1)', gv === '', 'groups=' + JSON.stringify(gv));
+  check(
+    'groups field can be cleared (stays empty, not snapped to 1)',
+    gv === '',
+    'groups=' + JSON.stringify(gv),
+  );
   await gIn[0].input('2');
   await sleep(500);
   gv = await mp.evaluate(() => {
@@ -96,7 +132,13 @@ try {
   // ---------- rename via editable modal ----------
   await mp.evaluate(() => {
     wx.setStorageSync('group-timer-routines', [
-      { id: 'rr1', name: '旧名字', createdAt: 1, updatedAt: 1, rounds: [{ name: 'X', workSec: 30, restSec: 0 }] }
+      {
+        id: 'rr1',
+        name: '旧名字',
+        createdAt: 1,
+        updatedAt: 1,
+        rounds: [{ name: 'X', workSec: 30, restSec: 0 }],
+      },
     ]);
   });
   await mp.reLaunch('/pages/routines/routines');
@@ -107,20 +149,43 @@ try {
   await rnBtn.tap();
   await sleep(1200);
   let rl = await mp.evaluate(() => wx.getStorageSync('group-timer-routines'));
-  check('rename applies modal content (trimmed)', rl[0] && rl[0].name === '新名字', JSON.stringify(rl[0] && rl[0].name));
-  check('rename bumps updatedAt, keeps rounds', rl[0] && rl[0].updatedAt > 1 && rl[0].rounds.length === 1);
+  check(
+    'rename applies modal content (trimmed)',
+    rl[0] && rl[0].name === '新名字',
+    JSON.stringify(rl[0] && rl[0].name),
+  );
+  check(
+    'rename bumps updatedAt, keeps rounds',
+    rl[0] && rl[0].updatedAt > 1 && rl[0].rounds.length === 1,
+  );
   await mp.mockWxMethod('showModal', { confirm: true, content: '   ' });
   await rnBtn.tap();
   await sleep(1000);
   rl = await mp.evaluate(() => wx.getStorageSync('group-timer-routines'));
-  check('rename with blank name keeps old name', rl[0] && rl[0].name === '新名字', JSON.stringify(rl[0] && rl[0].name));
+  check(
+    'rename with blank name keeps old name',
+    rl[0] && rl[0].name === '新名字',
+    JSON.stringify(rl[0] && rl[0].name),
+  );
 
   // ---------- routine numbering skips deleted numbers ----------
   // Existing: Routine 1, Routine 3 (Routine 2 was "deleted"). Next must be Routine 4.
   await mp.evaluate(() => {
     wx.setStorageSync('group-timer-routines', [
-      { id: 'a', name: 'Routine 1', createdAt: 1, updatedAt: 1, rounds: [{ name: 'X', workSec: 30, restSec: 0 }] },
-      { id: 'b', name: 'Routine 3', createdAt: 2, updatedAt: 2, rounds: [{ name: 'X', workSec: 30, restSec: 0 }] }
+      {
+        id: 'a',
+        name: 'Routine 1',
+        createdAt: 1,
+        updatedAt: 1,
+        rounds: [{ name: 'X', workSec: 30, restSec: 0 }],
+      },
+      {
+        id: 'b',
+        name: 'Routine 3',
+        createdAt: 2,
+        updatedAt: 2,
+        rounds: [{ name: 'X', workSec: 30, restSec: 0 }],
+      },
     ]);
     wx.setStorageSync('active-rounds', [{ name: 'X', workSec: 30, restSec: 0 }]);
   });
@@ -131,7 +196,11 @@ try {
   await saveBtn.tap();
   await sleep(1000);
   rl = await mp.evaluate(() => wx.getStorageSync('group-timer-routines'));
-  check('save numbers past max existing (Routine 4, not 3)', rl[2] && rl[2].name === 'Routine 4', JSON.stringify(rl.map((r) => r.name)));
+  check(
+    'save numbers past max existing (Routine 4, not 3)',
+    rl[2] && rl[2].name === 'Routine 4',
+    JSON.stringify(rl.map((r) => r.name)),
+  );
 
   // ---------- recovery card disappears after explicit stop ----------
   // Regression: stop() removed SESSION_KEY but home.onShow only had an
@@ -139,10 +208,14 @@ try {
   // started a brand-new session instead of restoring anything.
   await mp.evaluate(() => {
     wx.setStorageSync('group-timer-session', {
-      status: 'running', phase: 'work', currentRoundIndex: 0,
+      status: 'running',
+      phase: 'work',
+      currentRoundIndex: 0,
       rounds: [{ name: '回归测试', workSec: 300, restSec: 0 }],
-      phaseStartedAt: Date.now(), endTimestamp: Date.now() + 300000,
-      startedAt: Date.now(), updatedAt: Date.now()
+      phaseStartedAt: Date.now(),
+      endTimestamp: Date.now() + 300000,
+      startedAt: Date.now(),
+      updatedAt: Date.now(),
     });
     wx.setStorageSync('active-rounds', [{ name: '回归测试', workSec: 300, restSec: 0 }]);
   });
@@ -165,7 +238,10 @@ try {
       // written by render(), so a non-empty string proves onLoad finished.
       return t ? typeof t.data.display === 'string' && t.data.display.length > 0 : false;
     });
-    if (d) { ready = true; break; }
+    if (d) {
+      ready = true;
+      break;
+    }
     await sleep(200);
   }
   check('timer page finished onLoad before tapping', ready, 'display never rendered on timer page');
@@ -183,7 +259,10 @@ try {
   for (let i = 0; i < 30; i++) {
     await sleep(200);
     hd = await homeData();
-    if (hd && hd.recovery === null) { cleared = true; break; }
+    if (hd && hd.recovery === null) {
+      cleared = true;
+      break;
+    }
   }
   check('recovery cleared after stop', cleared, 'recovery=' + JSON.stringify(hd && hd.recovery));
   page = await mp.currentPage();

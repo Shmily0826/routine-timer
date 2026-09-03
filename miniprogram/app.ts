@@ -4,5 +4,5 @@
 App({
   onLaunch() {
     // No bootstrap needed for the Routine Timer MVP.
-  }
+  },
 });

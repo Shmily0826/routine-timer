@@ -33,10 +33,8 @@ const { spawn, spawnSync } = require('child_process');
 // ---------------------------------------------------------------- 配置
 
 const PORT = parseInt(process.env.WX_AUTO_PORT || '9420', 10);
-const PROJECT_DIR =
-  process.env.WX_PROJECT || path.resolve(__dirname, '..', '..'); // scripts/automation -> 项目根
-const CLI_BAT =
-  process.env.DEVTOOLS_CLI || 'D:\\Dev-Setup\\wechat-devtools\\cli.bat';
+const PROJECT_DIR = process.env.WX_PROJECT || path.resolve(__dirname, '..', '..'); // scripts/automation -> 项目根
+const CLI_BAT = process.env.DEVTOOLS_CLI || 'D:\\Dev-Setup\\wechat-devtools\\cli.bat';
 
 // DevTools 的 .ide 锁文件路径（含中文目录，Node 用 UTF-8 读写是安全的）
 const IDE_LOCK = path.join(
@@ -47,7 +45,7 @@ const IDE_LOCK = path.join(
   'User Data',
   'a1a0e508cb0f69b7981e64f6eccdd1aa',
   'Default',
-  '.ide'
+  '.ide',
 );
 
 const args = process.argv.slice(2);
@@ -154,7 +152,7 @@ function listRenderersUnder(dir) {
         'ProcessId,ExecutablePath',
         '/format:csv',
       ],
-      { encoding: 'utf8', windowsHide: true, timeout: 20000 }
+      { encoding: 'utf8', windowsHide: true, timeout: 20000 },
     );
     const out = r.stdout;
     if (!r.error && out) {
@@ -182,11 +180,11 @@ function listRenderersUnder(dir) {
       `Get-CimInstance Win32_Process -Filter "Name='WeChatAppEx.exe'" | ` +
       `Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith('${lit}',[StringComparison]::OrdinalIgnoreCase) } | ` +
       `Select-Object -ExpandProperty ProcessId`;
-    const r = spawnSync(
-      'powershell',
-      ['-NoProfile', '-NonInteractive', '-Command', script],
-      { encoding: 'utf8', windowsHide: true, timeout: 40000 }
-    );
+    const r = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      encoding: 'utf8',
+      windowsHide: true,
+      timeout: 40000,
+    });
     if (!r.error && r.stdout) {
       const pids = r.stdout
         .split(/\r?\n/)
@@ -314,7 +312,7 @@ async function main() {
       stdio: 'ignore',
       windowsHide: true,
       cwd: path.dirname(CLI_BAT),
-    }
+    },
   );
   child.unref();
 

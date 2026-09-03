@@ -1,5 +1,11 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": { "noEmit": false, "rootDir": "miniprogram", "outDir": ".wechat-build", "declaration": false, "sourceMap": true },
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "miniprogram",
+    "outDir": ".wechat-build",
+    "declaration": false,
+    "sourceMap": true
+  },
   "include": ["miniprogram/**/*.ts"]
 }

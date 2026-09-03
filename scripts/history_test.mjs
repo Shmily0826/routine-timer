@@ -6,9 +6,24 @@
 import automator from 'miniprogram-automator';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-process.on('unhandledRejection', async (e) => { try { await mp?.disconnect?.(); } catch (_) {} console.error('UNHANDLED REJECTION:', e && e.message); process.exit(1); });
-let pass = 0, fail = 0;
-const check = (name, cond) => { if (cond) { pass++; console.log('PASS ' + name); } else { fail++; console.log('FAIL ' + name); } };
+process.on('unhandledRejection', async (e) => {
+  try {
+    await mp?.disconnect?.();
+  } catch (_) {}
+  console.error('UNHANDLED REJECTION:', e && e.message);
+  process.exit(1);
+});
+let pass = 0,
+  fail = 0;
+const check = (name, cond) => {
+  if (cond) {
+    pass++;
+    console.log('PASS ' + name);
+  } else {
+    fail++;
+    console.log('FAIL ' + name);
+  }
+};
 
 const HISTORY = 'group-timer-history';
 const SESSION = 'group-timer-session';
@@ -16,14 +31,29 @@ const SESSION = 'group-timer-session';
 const mp = await automator.connect({ wsEndpoint: 'ws://127.0.0.1:9420' });
 try {
   // A 2-round session, 1s work / 0s rest each -> completes in ~2.5s on the timer.
-  await mp.evaluate((p) => {
-    const now = Date.now();
-    const snap = { status: 'running', phase: 'work', currentRoundIndex: 0, rounds: [ { name: '深蹲', workSec: 1, restSec: 0 }, { name: '俯卧撑', workSec: 1, restSec: 0 } ], phaseStartedAt: now, endTimestamp: now + 1000, startedAt: now, updatedAt: now };
-    wx.removeStorageSync(p.hist);
-    wx.removeStorageSync(p.sess);
-    wx.setStorageSync(p.sess, snap);
-    wx.reLaunch({ url: '/pages/timer/timer' });
-  }, { sess: SESSION, hist: HISTORY });
+  await mp.evaluate(
+    (p) => {
+      const now = Date.now();
+      const snap = {
+        status: 'running',
+        phase: 'work',
+        currentRoundIndex: 0,
+        rounds: [
+          { name: '深蹲', workSec: 1, restSec: 0 },
+          { name: '俯卧撑', workSec: 1, restSec: 0 },
+        ],
+        phaseStartedAt: now,
+        endTimestamp: now + 1000,
+        startedAt: now,
+        updatedAt: now,
+      };
+      wx.removeStorageSync(p.hist);
+      wx.removeStorageSync(p.sess);
+      wx.setStorageSync(p.sess, snap);
+      wx.reLaunch({ url: '/pages/timer/timer' });
+    },
+    { sess: SESSION, hist: HISTORY },
+  );
   await sleep(3000); // let it count down + complete (spans several 250ms ticks -> guard must hold)
 
   const rec = await mp.evaluate((hist) => (wx.getStorageSync(hist) || [])[0], HISTORY);

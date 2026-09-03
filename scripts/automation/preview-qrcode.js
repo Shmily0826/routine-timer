@@ -26,10 +26,8 @@ const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
 
-const PROJECT_DIR =
-  process.env.WX_PROJECT || path.resolve(__dirname, '..', '..'); // scripts/automation -> 项目根
-const CLI_BAT =
-  process.env.DEVTOOLS_CLI || 'D:\\Dev-Setup\\wechat-devtools\\cli.bat';
+const PROJECT_DIR = process.env.WX_PROJECT || path.resolve(__dirname, '..', '..'); // scripts/automation -> 项目根
+const CLI_BAT = process.env.DEVTOOLS_CLI || 'D:\\Dev-Setup\\wechat-devtools\\cli.bat';
 
 const args = process.argv.slice(2);
 const NO_OPEN = args.includes('--no-open');
@@ -39,8 +37,7 @@ const OUT_DIR = path.join(PROJECT_DIR, '.workbuddy');
 const OUT_PNG = path.join(OUT_DIR, 'preview-qr.png');
 
 const log = (m = '') => process.stdout.write(m + '\n');
-const hr = (t) =>
-  log('\n' + '='.repeat(56) + '\n' + t + '\n' + '='.repeat(56));
+const hr = (t) => log('\n' + '='.repeat(56) + '\n' + t + '\n' + '='.repeat(56));
 
 function main() {
   hr('小程序预览二维码生成器');
@@ -98,7 +95,7 @@ function main() {
       windowsHide: true,
       cwd: path.dirname(CLI_BAT),
       timeout: 240000, // 4 分钟上限
-    }
+    },
   );
 
   log('');

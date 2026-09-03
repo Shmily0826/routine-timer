@@ -4,28 +4,51 @@
 import automator from 'miniprogram-automator';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-process.on('unhandledRejection', async (e) => { try { await mp?.disconnect?.(); } catch (_) {} console.error('UNHANDLED REJECTION:', e && e.message); process.exit(1); });
-let pass = 0, fail = 0;
-const check = (name, cond) => { if (cond) { pass++; console.log('PASS ' + name); } else { fail++; console.log('FAIL ' + name); } };
+process.on('unhandledRejection', async (e) => {
+  try {
+    await mp?.disconnect?.();
+  } catch (_) {}
+  console.error('UNHANDLED REJECTION:', e && e.message);
+  process.exit(1);
+});
+let pass = 0,
+  fail = 0;
+const check = (name, cond) => {
+  if (cond) {
+    pass++;
+    console.log('PASS ' + name);
+  } else {
+    fail++;
+    console.log('FAIL ' + name);
+  }
+};
 
 const ROUTINES = 'group-timer-routines';
 const seedR1 = () => ({
-  id: 'r1', name: 'Editing', createdAt: 1, updatedAt: 1,
-  rounds: [ { name: 'X', workSec: 50, restSec: 8 }, { name: 'Y', workSec: 50, restSec: 8 } ]
+  id: 'r1',
+  name: 'Editing',
+  createdAt: 1,
+  updatedAt: 1,
+  rounds: [
+    { name: 'X', workSec: 50, restSec: 8 },
+    { name: 'Y', workSec: 50, restSec: 8 },
+  ],
 });
 
 const mp = await automator.connect({ wsEndpoint: 'ws://127.0.0.1:9420' });
 try {
   // Warm-up: ensure the simulator has rendered before we drive it.
   for (let i = 1; i <= 12; i++) {
-    const ok = await mp.evaluate(() => !!(getCurrentPages() && getCurrentPages().length)).catch(() => false);
+    const ok = await mp
+      .evaluate(() => !!(getCurrentPages() && getCurrentPages().length))
+      .catch(() => false);
     if (ok) break;
     await sleep(2000);
   }
   // Seed one routine; clear prefs so onLoad fallback doesn't interfere.
   await mp.evaluate((seed) => {
     wx.removeStorageSync('group-timer-prefs');
-    wx.setStorageSync('group-timer-routines', [ seed ]);
+    wx.setStorageSync('group-timer-routines', [seed]);
     wx.reLaunch({ url: '/pages/home/home?edit=r1' }); // real onLoad with options.edit
   }, seedR1());
   await sleep(1500);
@@ -37,14 +60,17 @@ try {
   });
   check('edit prefill editId=r1', home.editId === 'r1');
   check('edit prefill items.length=2', home.items && home.items.length === 2);
-  check('edit prefill item[0].work=50', home.items && home.items[0] && String(home.items[0].work) === '50');
+  check(
+    'edit prefill item[0].work=50',
+    home.items && home.items[0] && String(home.items[0].work) === '50',
+  );
   check('edit prefill item[0].name=X', home.items && home.items[0] && home.items[0].name === 'X');
 
   // (B) modify and save back -> overwrites r1, count stays 1
   // saveRoutine builds rounds from the `groups` count (not items.length), so set it too.
   await mp.evaluate(() => {
     const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
-    h.setData({ groups: '1', items: [ { name: '改了', work: 45, rest: 15, ow: true, or: true } ] });
+    h.setData({ groups: '1', items: [{ name: '改了', work: 45, rest: 15, ow: true, or: true }] });
     h.saveRoutine(); // -> wx.reLaunch to routines page
   });
   await sleep(1500);
@@ -66,7 +92,7 @@ try {
     const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
     // groups:'1' so one round is built; ow/or true so the per-item 20/3 wins over
     // the global duration/rest defaults (ow:false means "inherit global").
-    h.setData({ groups: '1', items: [ { name: '新', work: 20, rest: 3, ow: true, or: true } ] });
+    h.setData({ groups: '1', items: [{ name: '新', work: 20, rest: 3, ow: true, or: true }] });
     h.saveRoutine();
   });
   await sleep(1500);

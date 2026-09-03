@@ -16,7 +16,13 @@ import automator from 'miniprogram-automator';
 
 const WS = process.env.WS_ENDPOINT || 'ws://127.0.0.1:9420';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-process.on('unhandledRejection', async (e) => { try { await mp?.disconnect?.(); } catch (_) {} console.error('UNHANDLED REJECTION:', e && e.message); process.exit(1); });
+process.on('unhandledRejection', async (e) => {
+  try {
+    await mp?.disconnect?.();
+  } catch (_) {}
+  console.error('UNHANDLED REJECTION:', e && e.message);
+  process.exit(1);
+});
 const results = [];
 function check(name, ok, detail = '') {
   results.push({ name, ok: !!ok, detail });
@@ -29,8 +35,13 @@ console.log('connected to', WS);
 async function retry(label, fn, attempts = 3, delay = 700) {
   let lastErr;
   for (let i = 1; i <= attempts; i++) {
-    try { return await fn(); }
-    catch (e) { lastErr = e; console.log(`  ..retry ${i}/${attempts} ${label}: ${(e && e.message) || e}`); await sleep(delay); }
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      console.log(`  ..retry ${i}/${attempts} ${label}: ${(e && e.message) || e}`);
+      await sleep(delay);
+    }
   }
   throw lastErr;
 }
@@ -63,14 +74,21 @@ async function tapUntil(index, label, predicate, attempts = 5, delay = 600) {
 }
 // Tolerant single-attempt read: the page node transiently disappears.
 async function tryData() {
-  try { return await (await mp.currentPage()).data(); } catch (_) { return null; }
+  try {
+    return await (await mp.currentPage()).data();
+  } catch (_) {
+    return null;
+  }
 }
 async function poll(predicate, timeoutMs = 15000, stepMs = 200) {
   const start = Date.now();
   let last = null;
   while (Date.now() - start < timeoutMs) {
     const d = await tryData();
-    if (d) { last = d; if (predicate(d)) return d; }
+    if (d) {
+      last = d;
+      if (predicate(d)) return d;
+    }
     await sleep(stepMs);
   }
   return { __timeout: true, last };
@@ -80,13 +98,18 @@ async function configure(groups, work, rest) {
   // The automator connection occasionally times out mid-run ("timeout waiting
   // for automator response"); route every step through the retry helper so one
   // hiccup doesn't abort the whole suite.
-  await retry('configure(inputs)', async () => {
-    const page = await mp.currentPage();
-    const ins = await page.$$('input');
-    await ins[0].input(String(groups));
-    await ins[1].input(String(work));
-    await ins[2].input(String(rest));
-  }, 3, 1000);
+  await retry(
+    'configure(inputs)',
+    async () => {
+      const page = await mp.currentPage();
+      const ins = await page.$$('input');
+      await ins[0].input(String(groups));
+      await ins[1].input(String(work));
+      await ins[2].input(String(rest));
+    },
+    3,
+    1000,
+  );
   await sleep(500);
 }
 async function stopToHome() {
@@ -96,7 +119,10 @@ async function stopToHome() {
   // node can keep reporting the timer page for a while after navigateBack.
   for (let i = 1; i <= 8; i++) {
     await sleep(700);
-    try { const p = await mp.currentPage(); if (p && p.path.includes('home')) return p; } catch (_) {}
+    try {
+      const p = await mp.currentPage();
+      if (p && p.path.includes('home')) return p;
+    } catch (_) {}
     console.log(`  ..waiting for home after stop (${i})`);
   }
   return mp.currentPage();
@@ -104,12 +130,22 @@ async function stopToHome() {
 
 try {
   // Always begin from Home, so this suite is chainable after any other suite.
-  await mp.evaluate(() => { try { wx.reLaunch({ url: '/pages/home/home' }); } catch (_) {} });
+  await mp.evaluate(() => {
+    try {
+      wx.reLaunch({ url: '/pages/home/home' });
+    } catch (_) {}
+  });
   await sleep(1500);
   // ---------- warm-up: the simulator may not have rendered a page yet ----------
   let page = null;
   for (let i = 1; i <= 12; i++) {
-    try { const p = await mp.currentPage(); if (p && p.path) { page = p; break; } } catch (_) {}
+    try {
+      const p = await mp.currentPage();
+      if (p && p.path) {
+        page = p;
+        break;
+      }
+    } catch (_) {}
     console.log(`  ..waiting for the simulator page (${i})`);
     await sleep(2500);
   }
@@ -119,18 +155,32 @@ try {
   // ---------- Session A: 3 rounds / 3s work / 1s rest ----------
   await configure(3, 3, 1);
   let hd = await readData();
-  check('quick setup applied (3 / 3s / 1s)', Number(hd.groups) === 3 && Number(hd.duration) === 3 && Number(hd.rest) === 1,
-    `groups=${hd.groups} duration=${hd.duration} rest=${hd.rest}`);
+  check(
+    'quick setup applied (3 / 3s / 1s)',
+    Number(hd.groups) === 3 && Number(hd.duration) === 3 && Number(hd.rest) === 1,
+    `groups=${hd.groups} duration=${hd.duration} rest=${hd.rest}`,
+  );
   const inherited = hd.items.every((it) => Number(it.work) === 3 && Number(it.rest) === 1);
-  check('rounds inherit the new work/rest (Quick Setup fix)', inherited,
-    'items=' + JSON.stringify(hd.items.map((i) => `${i.work}/${i.rest}`)));
+  check(
+    'rounds inherit the new work/rest (Quick Setup fix)',
+    inherited,
+    'items=' + JSON.stringify(hd.items.map((i) => `${i.work}/${i.rest}`)),
+  );
 
   await tapSel('button.start', 'start A');
   await sleep(1500);
-  check('start navigates to timer', (await mp.currentPage()).path.includes('timer'), (await mp.currentPage()).path);
+  check(
+    'start navigates to timer',
+    (await mp.currentPage()).path.includes('timer'),
+    (await mp.currentPage()).path,
+  );
 
   let td = await readData();
-  check('timer starts at round 1 / total 3', td.group === 1 && td.total === 3, `group=${td.group} total=${td.total}`);
+  check(
+    'timer starts at round 1 / total 3',
+    td.group === 1 && td.total === 3,
+    `group=${td.group} total=${td.total}`,
+  );
   const d0 = td.display;
   await sleep(1200);
   td = await readData();
@@ -149,13 +199,21 @@ try {
   await tapSel('button.start', 'start B');
   await sleep(1200);
   let done = await poll((d) => d.completed === true, 10000);
-  check('session completes', !done.__timeout, done.__timeout ? 'timed out, last=' + JSON.stringify(done.last) : 'completed=true');
+  check(
+    'session completes',
+    !done.__timeout,
+    done.__timeout ? 'timed out, last=' + JSON.stringify(done.last) : 'completed=true',
+  );
 
   if (!done.__timeout) {
     await tap(0, 'again');
     await sleep(1200);
     const ad = await readData();
-    check('restart (再来一次) resets the session', ad.completed !== true, 'completed=' + ad.completed);
+    check(
+      'restart (再来一次) resets the session',
+      ad.completed !== true,
+      'completed=' + ad.completed,
+    );
   } else {
     check('restart (再来一次) resets the session', false, 'skipped - never completed');
   }
@@ -166,7 +224,11 @@ try {
   // Fresh page stack: after sessions A/B the automator timer-page node can go
   // stale (it drops the node after a few seconds on timer), so reLaunch Home to
   // get a clean timer instance for the pause/resume checks.
-  await mp.evaluate(() => { try { wx.reLaunch({ url: '/pages/home/home' }); } catch (_) {} });
+  await mp.evaluate(() => {
+    try {
+      wx.reLaunch({ url: '/pages/home/home' });
+    } catch (_) {}
+  });
   await sleep(1500);
   await configure(3, 60, 5);
   await tapSel('button.start', 'start C');
@@ -179,25 +241,39 @@ try {
   const frozen = (await readData()).display;
   await sleep(1100);
   let stillPaused = await readData();
-  check('pause freezes countdown', stillPaused.paused === true && stillPaused.display === frozen,
-    `paused=${stillPaused.paused} ${frozen} -> ${stillPaused.display}`);
+  check(
+    'pause freezes countdown',
+    stillPaused.paused === true && stillPaused.display === frozen,
+    `paused=${stillPaused.paused} ${frozen} -> ${stillPaused.display}`,
+  );
 
   await tapUntil(0, 'resume', (d) => d.paused === false);
   await sleep(1100);
   let resumed = await readData();
-  check('resume restarts countdown', resumed.paused === false && resumed.display !== frozen,
-    `${frozen} -> ${resumed.display}`);
+  check(
+    'resume restarts countdown',
+    resumed.paused === false && resumed.display !== frozen,
+    `${frozen} -> ${resumed.display}`,
+  );
 
   const gBefore = resumed.group;
   await tap(2, 'next');
   await sleep(700);
   let afterNext = await readData();
-  check('next increments the round', afterNext.group === gBefore + 1, `${gBefore} -> ${afterNext.group}`);
+  check(
+    'next increments the round',
+    afterNext.group === gBefore + 1,
+    `${gBefore} -> ${afterNext.group}`,
+  );
 
   await tap(1, 'previous');
   await sleep(700);
   let afterPrev = await readData();
-  check('previous decrements the round', afterPrev.group === gBefore, `${afterNext.group} -> ${afterPrev.group}`);
+  check(
+    'previous decrements the round',
+    afterPrev.group === gBefore,
+    `${afterNext.group} -> ${afterPrev.group}`,
+  );
 
   home = await stopToHome();
   check('session C stop returns to home', home.path.includes('home'), home.path);
@@ -215,13 +291,20 @@ try {
   // appear. Recovery-on-return (leaving without stopping / cold start) is
   // covered separately by scripts/recovery_test.mjs, which restarts the
   // project with `cli close` + `cli open` to emulate a cold start.
-  check('explicit stop discards the session (no recovery card)', !rec.recovery,
-    'recovery=' + JSON.stringify(rec.recovery));
+  check(
+    'explicit stop discards the session (no recovery card)',
+    !rec.recovery,
+    'recovery=' + JSON.stringify(rec.recovery),
+  );
 
   // ---------- Routines (last: no back button on that page) ----------
   await tapSel('button.secondary', 'routines');
   await sleep(1800);
-  check('routines page reached', (await mp.currentPage()).path.includes('routines'), (await mp.currentPage()).path);
+  check(
+    'routines page reached',
+    (await mp.currentPage()).path.includes('routines'),
+    (await mp.currentPage()).path,
+  );
 
   const before = (await readData()).routines.length;
   await tapSel('button.start', 'save routine');
@@ -236,7 +319,11 @@ try {
   check('routine deleted', cntAfter === cntBefore - 1, `${cntBefore} -> ${cntAfter}`);
 } catch (e) {
   let detail = '';
-  try { detail = e && (e.stack || e.message) ? (e.stack || e.message) : JSON.stringify(e); } catch (_) { detail = String(e); }
+  try {
+    detail = e && (e.stack || e.message) ? e.stack || e.message : JSON.stringify(e);
+  } catch (_) {
+    detail = String(e);
+  }
   console.log('RAW ERROR:\n' + detail);
   check('smoke run completed without exception', false, (e && e.message) || String(e));
 } finally {

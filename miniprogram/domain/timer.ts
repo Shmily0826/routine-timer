@@ -1,16 +1,136 @@
 export type Phase = 'work' | 'rest';
 export type SessionStatus = 'running' | 'paused' | 'completed';
-export interface ResolvedRound { name: string; workSec: number; restSec: number; }
-export interface SessionSnapshot { status: SessionStatus; phase: Phase; currentRoundIndex: number; rounds: ResolvedRound[]; phaseStartedAt: number; endTimestamp?: number; pausedRemainingMs?: number; startedAt: number; updatedAt: number; }
-export interface TimerView { session: SessionSnapshot; remainingMs: number; }
-export function normalizeSeconds(value: unknown, fallback: number, max = 3600): number { const n=Number(value); return Number.isFinite(n)&&n>=0&&n<=max?Math.floor(n):fallback; }
-export function createSession(rounds: ResolvedRound[], now=Date.now()): SessionSnapshot { if(!rounds.length)throw new Error('At least one round is required'); const work=normalizeSeconds(rounds[0].workSec,30)*1000; return {status:'running',phase:'work',currentRoundIndex:0,rounds,phaseStartedAt:now,endTimestamp:now+work,startedAt:now,updatedAt:now}; }
-export const createTimer=createSession;
-export function remainingMs(s:SessionSnapshot,now=Date.now()):number{return s.status==='paused'?Math.max(0,s.pausedRemainingMs||0):s.status==='running'&&s.endTimestamp!==undefined?Math.max(0,s.endTimestamp-now):0}
-export function reconcile(s:SessionSnapshot,now=Date.now()):TimerView { let x={...s}; let left=remainingMs(x,now); while(x.status==='running'&&left<=0){const boundary=x.endTimestamp!;const r=x.rounds[x.currentRoundIndex];if(x.phase==='work'&&r.restSec>0)x={...x,phase:'rest',phaseStartedAt:boundary,endTimestamp:boundary+r.restSec*1000,updatedAt:now};else if(x.currentRoundIndex<x.rounds.length-1){const i=x.currentRoundIndex+1;x={...x,phase:'work',currentRoundIndex:i,phaseStartedAt:boundary,endTimestamp:boundary+x.rounds[i].workSec*1000,updatedAt:now};}else x={...x,status:'completed',endTimestamp:undefined,updatedAt:now};left=remainingMs(x,now)}return {session:x,remainingMs:left}; }
-export const snapshot=reconcile;
-export function pause(s:SessionSnapshot,now=Date.now()):SessionSnapshot{if(s.status!=='running')return s;return {...s,status:'paused',pausedRemainingMs:remainingMs(s,now),endTimestamp:undefined,updatedAt:now}}
-export function resume(s:SessionSnapshot,now=Date.now()):SessionSnapshot{if(s.status!=='paused')return s;const left=s.pausedRemainingMs||0;return {...s,status:'running',phaseStartedAt:now,endTimestamp:now+left,pausedRemainingMs:undefined,updatedAt:now}}
-export function next(s:SessionSnapshot,now=Date.now()):SessionSnapshot{const x=reconcile(s,now).session;if(x.currentRoundIndex>=x.rounds.length-1)return {...x,status:'completed',endTimestamp:undefined,updatedAt:now};const i=x.currentRoundIndex+1;return {...x,status:'running',phase:'work',currentRoundIndex:i,phaseStartedAt:now,endTimestamp:now+x.rounds[i].workSec*1000,updatedAt:now}}
-export function previous(s:SessionSnapshot,now=Date.now()):SessionSnapshot{const x=reconcile(s,now).session;const i=Math.max(0,x.currentRoundIndex-1);return {...x,status:'running',phase:'work',currentRoundIndex:i,phaseStartedAt:now,endTimestamp:now+x.rounds[i].workSec*1000,updatedAt:now}}
-export function move(s:SessionSnapshot,rounds:ResolvedRound[],direction:-1|1,now=Date.now()){return direction===1?next({...s,rounds},now):previous({...s,rounds},now)}
+export interface ResolvedRound {
+  name: string;
+  workSec: number;
+  restSec: number;
+}
+export interface SessionSnapshot {
+  status: SessionStatus;
+  phase: Phase;
+  currentRoundIndex: number;
+  rounds: ResolvedRound[];
+  phaseStartedAt: number;
+  endTimestamp?: number;
+  pausedRemainingMs?: number;
+  startedAt: number;
+  updatedAt: number;
+}
+export interface TimerView {
+  session: SessionSnapshot;
+  remainingMs: number;
+}
+export function normalizeSeconds(value: unknown, fallback: number, max = 3600): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 && n <= max ? Math.floor(n) : fallback;
+}
+export function createSession(rounds: ResolvedRound[], now = Date.now()): SessionSnapshot {
+  if (!rounds.length) throw new Error('At least one round is required');
+  const work = normalizeSeconds(rounds[0].workSec, 30) * 1000;
+  return {
+    status: 'running',
+    phase: 'work',
+    currentRoundIndex: 0,
+    rounds,
+    phaseStartedAt: now,
+    endTimestamp: now + work,
+    startedAt: now,
+    updatedAt: now,
+  };
+}
+export const createTimer = createSession;
+export function remainingMs(s: SessionSnapshot, now = Date.now()): number {
+  return s.status === 'paused'
+    ? Math.max(0, s.pausedRemainingMs || 0)
+    : s.status === 'running' && s.endTimestamp !== undefined
+      ? Math.max(0, s.endTimestamp - now)
+      : 0;
+}
+export function reconcile(s: SessionSnapshot, now = Date.now()): TimerView {
+  let x = { ...s };
+  let left = remainingMs(x, now);
+  while (x.status === 'running' && left <= 0) {
+    const boundary = x.endTimestamp!;
+    const r = x.rounds[x.currentRoundIndex];
+    if (x.phase === 'work' && r.restSec > 0)
+      x = {
+        ...x,
+        phase: 'rest',
+        phaseStartedAt: boundary,
+        endTimestamp: boundary + r.restSec * 1000,
+        updatedAt: now,
+      };
+    else if (x.currentRoundIndex < x.rounds.length - 1) {
+      const i = x.currentRoundIndex + 1;
+      x = {
+        ...x,
+        phase: 'work',
+        currentRoundIndex: i,
+        phaseStartedAt: boundary,
+        endTimestamp: boundary + x.rounds[i].workSec * 1000,
+        updatedAt: now,
+      };
+    } else x = { ...x, status: 'completed', endTimestamp: undefined, updatedAt: now };
+    left = remainingMs(x, now);
+  }
+  return { session: x, remainingMs: left };
+}
+export const snapshot = reconcile;
+export function pause(s: SessionSnapshot, now = Date.now()): SessionSnapshot {
+  if (s.status !== 'running') return s;
+  return {
+    ...s,
+    status: 'paused',
+    pausedRemainingMs: remainingMs(s, now),
+    endTimestamp: undefined,
+    updatedAt: now,
+  };
+}
+export function resume(s: SessionSnapshot, now = Date.now()): SessionSnapshot {
+  if (s.status !== 'paused') return s;
+  const left = s.pausedRemainingMs || 0;
+  return {
+    ...s,
+    status: 'running',
+    phaseStartedAt: now,
+    endTimestamp: now + left,
+    pausedRemainingMs: undefined,
+    updatedAt: now,
+  };
+}
+export function next(s: SessionSnapshot, now = Date.now()): SessionSnapshot {
+  const x = reconcile(s, now).session;
+  if (x.currentRoundIndex >= x.rounds.length - 1)
+    return { ...x, status: 'completed', endTimestamp: undefined, updatedAt: now };
+  const i = x.currentRoundIndex + 1;
+  return {
+    ...x,
+    status: 'running',
+    phase: 'work',
+    currentRoundIndex: i,
+    phaseStartedAt: now,
+    endTimestamp: now + x.rounds[i].workSec * 1000,
+    updatedAt: now,
+  };
+}
+export function previous(s: SessionSnapshot, now = Date.now()): SessionSnapshot {
+  const x = reconcile(s, now).session;
+  const i = Math.max(0, x.currentRoundIndex - 1);
+  return {
+    ...x,
+    status: 'running',
+    phase: 'work',
+    currentRoundIndex: i,
+    phaseStartedAt: now,
+    endTimestamp: now + x.rounds[i].workSec * 1000,
+    updatedAt: now,
+  };
+}
+export function move(
+  s: SessionSnapshot,
+  rounds: ResolvedRound[],
+  direction: -1 | 1,
+  now = Date.now(),
+) {
+  return direction === 1 ? next({ ...s, rounds }, now) : previous({ ...s, rounds }, now);
+}

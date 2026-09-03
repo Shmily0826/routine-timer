@@ -4,22 +4,47 @@
 import automator from 'miniprogram-automator';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-process.on('unhandledRejection', async (e) => { try { await mp?.disconnect?.(); } catch (_) {} console.error('UNHANDLED REJECTION:', e && e.message); process.exit(1); });
-let pass = 0, fail = 0;
-const check = (name, cond) => { if (cond) { pass++; console.log('PASS ' + name); } else { fail++; console.log('FAIL ' + name); } };
+process.on('unhandledRejection', async (e) => {
+  try {
+    await mp?.disconnect?.();
+  } catch (_) {}
+  console.error('UNHANDLED REJECTION:', e && e.message);
+  process.exit(1);
+});
+let pass = 0,
+  fail = 0;
+const check = (name, cond) => {
+  if (cond) {
+    pass++;
+    console.log('PASS ' + name);
+  } else {
+    fail++;
+    console.log('FAIL ' + name);
+  }
+};
 
 const ROUTINES = 'group-timer-routines';
 const seed = () => ({
-  id: 'r1', name: 'Editing', createdAt: 1, updatedAt: 1,
-  rounds: [ { name: 'X', workSec: 50, restSec: 8 }, { name: 'Y', workSec: 50, restSec: 8 } ]
+  id: 'r1',
+  name: 'Editing',
+  createdAt: 1,
+  updatedAt: 1,
+  rounds: [
+    { name: 'X', workSec: 50, restSec: 8 },
+    { name: 'Y', workSec: 50, restSec: 8 },
+  ],
 });
 
 const mp = await automator.connect({ wsEndpoint: 'ws://127.0.0.1:9420' });
 try {
-  await mp.evaluate((KEY, s) => {
-    wx.setStorageSync(KEY, [ s ]);
-    wx.reLaunch({ url: '/pages/routines/routines' });
-  }, ROUTINES, seed());
+  await mp.evaluate(
+    (KEY, s) => {
+      wx.setStorageSync(KEY, [s]);
+      wx.reLaunch({ url: '/pages/routines/routines' });
+    },
+    ROUTINES,
+    seed(),
+  );
   await sleep(1500);
 
   // Clone the first routine via its page method (synthetic event).

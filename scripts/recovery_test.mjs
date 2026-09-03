@@ -21,21 +21,38 @@ const WS = process.env.WS_ENDPOINT || 'ws://127.0.0.1:9420';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Guarantee the automator socket is released even if an evaluate/tap times out
 // (an uncaught rejection would otherwise skip mp.disconnect and wedge the IDE).
-process.on('unhandledRejection', async (e) => { try { await mp?.disconnect?.(); } catch (_) {} console.error('UNHANDLED REJECTION:', e && e.message); process.exit(1); });
-let pass = 0, fail = 0;
-const check = (ok, label, extra = '') => { if (ok) pass++; else fail++; console.log((ok ? 'PASS  ' : 'FAIL  ') + label + (extra ? '  ' + extra : '')); };
+process.on('unhandledRejection', async (e) => {
+  try {
+    await mp?.disconnect?.();
+  } catch (_) {}
+  console.error('UNHANDLED REJECTION:', e && e.message);
+  process.exit(1);
+});
+let pass = 0,
+  fail = 0;
+const check = (ok, label, extra = '') => {
+  if (ok) pass++;
+  else fail++;
+  console.log((ok ? 'PASS  ' : 'FAIL  ') + label + (extra ? '  ' + extra : ''));
+};
 
 const mp = await automator.connect({ wsEndpoint: WS });
 
 // Warm-up: when this is the first simulator suite after other (non-simulator)
 // steps, the app may not have rendered yet. Wait for a page, then reLaunch Home.
 for (let i = 1; i <= 12; i++) {
-  const ok = await mp.evaluate(() => !!(getCurrentPages() && getCurrentPages().length)).catch(() => false);
+  const ok = await mp
+    .evaluate(() => !!(getCurrentPages() && getCurrentPages().length))
+    .catch(() => false);
   if (ok) break;
   console.log('  ..waiting for simulator app (' + i + ')');
   await sleep(2000);
 }
-await mp.evaluate(() => { try { wx.reLaunch({ url: '/pages/home/home' }); } catch (_) {} });
+await mp.evaluate(() => {
+  try {
+    wx.reLaunch({ url: '/pages/home/home' });
+  } catch (_) {}
+});
 await sleep(1500);
 
 const readData = async (route) => {
@@ -61,9 +78,18 @@ const injectAndFire = async () => {
     const rounds = [
       { name: '第一组', workSec: 600, restSec: 60 },
       { name: '第二组', workSec: 600, restSec: 60 },
-      { name: '第三组', workSec: 600, restSec: 60 }
+      { name: '第三组', workSec: 600, restSec: 60 },
     ];
-    const s = { status: 'running', phase: 'work', currentRoundIndex: 1, rounds, phaseStartedAt: now, endTimestamp: now + 600000, startedAt: now, updatedAt: now };
+    const s = {
+      status: 'running',
+      phase: 'work',
+      currentRoundIndex: 1,
+      rounds,
+      phaseStartedAt: now,
+      endTimestamp: now + 600000,
+      startedAt: now,
+      updatedAt: now,
+    };
     wx.setStorageSync('group-timer-session', s);
     wx.reLaunch({ url: '/pages/home/home' }); // framework re-show -> real onShow
   });
@@ -82,16 +108,31 @@ await injectAndFire();
 let hd = await readData('pages/home/home');
 let card = hd && hd.recovery;
 check(!!card, 'Discard: recovery card rendered on cold start', JSON.stringify(card));
-check(card && card.round === 2 && card.name === '第二组', 'Discard: card shows injected round 2 / 第二组', card ? 'round=' + card.round + ' name=' + JSON.stringify(card.name) : 'no card');
+check(
+  card && card.round === 2 && card.name === '第二组',
+  'Discard: card shows injected round 2 / 第二组',
+  card ? 'round=' + card.round + ' name=' + JSON.stringify(card.name) : 'no card',
+);
 if (card) {
   const btns = await (await mp.currentPage()).$$('button');
   // recovery card is the first wx:if block -> btns[0]=继续训练 btns[1]=放弃
   await btns[1].tap();
   await sleep(1600);
   const after = await readData('pages/home/home');
-  check(after && after.recovery === null, 'Discard: 放弃 clears the recovery card', after ? 'recovery=' + JSON.stringify(after.recovery) : 'no data');
+  check(
+    after && after.recovery === null,
+    'Discard: 放弃 clears the recovery card',
+    after ? 'recovery=' + JSON.stringify(after.recovery) : 'no data',
+  );
   const stored = await mp.evaluate(() => wx.getStorageSync('group-timer-session'));
-  check(stored === '' || stored === undefined || stored === null || (stored && stored.status === 'completed'), 'Discard: session removed from storage', JSON.stringify(stored).slice(0, 80));
+  check(
+    stored === '' ||
+      stored === undefined ||
+      stored === null ||
+      (stored && stored.status === 'completed'),
+    'Discard: session removed from storage',
+    JSON.stringify(stored).slice(0, 80),
+  );
 }
 
 // ---- Continue branch ----
@@ -99,7 +140,11 @@ await injectAndFire();
 hd = await readData('pages/home/home');
 card = hd && hd.recovery;
 check(!!card, 'Continue: recovery card rendered on cold start', JSON.stringify(card));
-check(card && card.round === 2 && card.name === '第二组', 'Continue: card shows injected round 2 / 第二组', card ? 'round=' + card.round + ' name=' + JSON.stringify(card.name) : 'no card');
+check(
+  card && card.round === 2 && card.name === '第二组',
+  'Continue: card shows injected round 2 / 第二组',
+  card ? 'round=' + card.round + ' name=' + JSON.stringify(card.name) : 'no card',
+);
 let resumed = false;
 if (card) {
   const btns = await (await mp.currentPage()).$$('button');
@@ -107,9 +152,17 @@ if (card) {
   await sleep(2500);
   const tr = await readData('pages/timer/timer');
   resumed = !!tr;
-  check(resumed, 'Continue: timer page active with resumed session', tr ? 'group=' + tr.group + ' name=' + JSON.stringify(tr.name) : 'no timer data');
+  check(
+    resumed,
+    'Continue: timer page active with resumed session',
+    tr ? 'group=' + tr.group + ' name=' + JSON.stringify(tr.name) : 'no timer data',
+  );
   if (resumed) {
-    check(tr.group === 2 && tr.name === '第二组', 'Continue: timer resumed on round 2 / 第二组', 'group=' + tr.group + ' name=' + JSON.stringify(tr.name) + ' display=' + tr.display);
+    check(
+      tr.group === 2 && tr.name === '第二组',
+      'Continue: timer resumed on round 2 / 第二组',
+      'group=' + tr.group + ' name=' + JSON.stringify(tr.name) + ' display=' + tr.display,
+    );
   }
 }
 
@@ -120,7 +173,11 @@ if (resumed) {
     await stopBtn.tap();
     await sleep(1800);
   } catch (_) {}
-  await mp.evaluate(() => { try { wx.removeStorageSync('group-timer-session'); } catch (_) {} });
+  await mp.evaluate(() => {
+    try {
+      wx.removeStorageSync('group-timer-session');
+    } catch (_) {}
+  });
 }
 
 console.log('');

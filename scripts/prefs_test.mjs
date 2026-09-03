@@ -4,9 +4,24 @@
 import automator from 'miniprogram-automator';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-process.on('unhandledRejection', async (e) => { try { await mp?.disconnect?.(); } catch (_) {} console.error('UNHANDLED REJECTION:', e && e.message); process.exit(1); });
-let pass = 0, fail = 0;
-const check = (name, cond) => { if (cond) { pass++; console.log('PASS ' + name); } else { fail++; console.log('FAIL ' + name); } };
+process.on('unhandledRejection', async (e) => {
+  try {
+    await mp?.disconnect?.();
+  } catch (_) {}
+  console.error('UNHANDLED REJECTION:', e && e.message);
+  process.exit(1);
+});
+let pass = 0,
+  fail = 0;
+const check = (name, cond) => {
+  if (cond) {
+    pass++;
+    console.log('PASS ' + name);
+  } else {
+    fail++;
+    console.log('FAIL ' + name);
+  }
+};
 
 const mp = await automator.connect({ wsEndpoint: 'ws://127.0.0.1:9420' });
 try {
@@ -16,8 +31,14 @@ try {
   await mp.evaluate(() => {
     wx.removeStorageSync('group-timer-prefs');
     wx.setStorageSync('group-timer-prefs', {
-      groups: 3, duration: 99, rest: 7,
-      items: [ { name: 'A', work: 99, rest: 7 }, { name: 'B', work: 99, rest: 7 }, { name: 'C', work: 99, rest: 7 } ]
+      groups: 3,
+      duration: 99,
+      rest: 7,
+      items: [
+        { name: 'A', work: 99, rest: 7 },
+        { name: 'B', work: 99, rest: 7 },
+        { name: 'C', work: 99, rest: 7 },
+      ],
     });
   });
   await mp.reLaunch('/pages/home/home');
@@ -36,7 +57,11 @@ try {
   // Change values, persist, cold-start again -> should remember.
   await mp.evaluate(() => {
     const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
-    h.setData({ duration: 42, rest: 5, items: [ { name: 'Z', work: 42, rest: 5, ow: false, or: false } ] });
+    h.setData({
+      duration: 42,
+      rest: 5,
+      items: [{ name: 'Z', work: 42, rest: 5, ow: false, or: false }],
+    });
     h.persistPrefs();
   });
   await mp.reLaunch('/pages/home/home');
