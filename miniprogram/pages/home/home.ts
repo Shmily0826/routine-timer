@@ -15,7 +15,10 @@ function parseSec(raw: any, min: number, fallback: number, max: number = MAX): n
   const v = Number(raw);
   if (!Number.isFinite(v)) return fallback;
   if (v < min) return min;
-  return Math.min(max, v);
+  // Floor so a fractional input (30.5) is stored as the same value the engine
+  // will run: domain/timer.ts normalizeSeconds() floors, and without this the
+  // routine list would advertise 30.5s while the timer counted 30s.
+  return Math.min(max, Math.floor(v));
 }
 function parseGroups(raw: any, fallback: number): number {
   return parseSec(raw, 1, fallback, MAX_GROUPS);
