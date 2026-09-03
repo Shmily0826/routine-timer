@@ -55,9 +55,8 @@ Page({
     this.render();
   },
   onShow() {
-    if (this.tickId) clearInterval(this.tickId);
     this.render();
-    this.tickId = setInterval(() => this.render(), 250) as any;
+    this.ensureTicking();
   },
   onHide() {
     clearInterval(this.tickId);
@@ -80,6 +79,7 @@ Page({
     if (!this.session) return;
     const v = reconcile(this.session, Date.now());
     this.session = v.session;
+    this.ensureTicking();
     const _pk = this._cueKey;
     const _k =
       this.session.status === 'completed'
@@ -176,6 +176,9 @@ Page({
   },
   again() {
     this.recorded = false;
+    this._cueKey = null;
+    this._cdKey = null;
+    wx.setKeepScreenOn({ keepScreenOn: true });
     this.setData({ summary: null });
     this.session = createSession(this.session?.rounds || []);
     this.persist();
@@ -190,7 +193,17 @@ Page({
   },
   onUnload() {
     clearInterval(this.tickId);
+    this.tickId = 0;
     wx.setKeepScreenOn({ keepScreenOn: false });
     this.audio?.destroy();
+  },
+  ensureTicking() {
+    if (!this.session) return;
+    if (this.session.status === 'completed') {
+      if (this.tickId) clearInterval(this.tickId);
+      this.tickId = 0;
+      return;
+    }
+    if (!this.tickId) this.tickId = setInterval(() => this.render(), 250) as any;
   },
 });
