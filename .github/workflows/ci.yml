@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      # typecheck + tsc build + unit tests (includes the DevTools-free page
+      # tests). The automator suites are intentionally NOT run here: they need
+      # a WeChat DevTools instance bound to ws://127.0.0.1:9420, which only
+      # exists on a Windows desktop session. Run `npm run verify` locally for
+      # those.
+      - run: npm run ci
