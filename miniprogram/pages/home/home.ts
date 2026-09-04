@@ -280,4 +280,7 @@ Page({
   history() {
     wx.navigateTo({ url: '/pages/history/history' });
   },
+  about() {
+    wx.navigateTo({ url: '/pages/about/about' });
+  },
 });

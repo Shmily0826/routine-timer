@@ -138,3 +138,19 @@
   font-weight: 700;
   margin: 0 0 10rpx;
 }
+.footer {
+  padding: 40rpx 0 0;
+  text-align: center;
+  color: var(--fgMuted, #637083);
+  font-size: 26rpx;
+}
+.row .muted {
+  color: var(--fgMuted, #637083);
+}
+.note {
+  padding: 24rpx 0;
+}
+.note .sub {
+  display: block;
+  line-height: 1.8;
+}

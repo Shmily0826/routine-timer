@@ -3,7 +3,8 @@
     "pages/home/home",
     "pages/timer/timer",
     "pages/routines/routines",
-    "pages/history/history"
+    "pages/history/history",
+    "pages/about/about"
   ],
   "window": {
     "navigationBarTitleText": "分组练习计时器",

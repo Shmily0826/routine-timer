@@ -271,3 +271,14 @@ test('discard drops the session and hides the card', (t) => {
   assert.equal(h.page.data.recovery, null);
   assert.equal(matching(h.calls, 'navigateTo').length, 0, 'discard must not navigate');
 });
+
+test('about navigates to the about page', (t) => {
+  const h = loadHome();
+  t.after(() => h.dispose());
+
+  h.page.about();
+  assert.ok(
+    h.calls.includes('navigateTo:/pages/about/about'),
+    `expected a navigation to the about page, got ${JSON.stringify(h.calls)}`,
+  );
+});
