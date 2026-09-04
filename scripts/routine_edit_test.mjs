@@ -1,16 +1,15 @@
 // Simulator verification: routine editing (no real device needed).
 // Covers: (A) prefill via ?edit=<id> on real onLoad, (B) saveRoutine overwrites existing
 // routine by id (count unchanged), (C) saveRoutine creates new routine when no editId.
+//
+// Every wait here is a poll, not a fixed sleep. A sleep that is one beat too
+// short reads the *previous* page's data, and because (B) and (C) build on (A)'s
+// state, a single missed navigation silently turned this suite into 2 pass /
+// 10 fail with two checks passing by accident.
 import automator from 'miniprogram-automator';
+import { waitForRoute, waitForData, warmUp, installGuards } from './automation/wait.mjs';
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-process.on('unhandledRejection', async (e) => {
-  try {
-    await mp?.disconnect?.();
-  } catch (_) {}
-  console.error('UNHANDLED REJECTION:', e && e.message);
-  process.exit(1);
-});
+installGuards(() => mp);
 let pass = 0,
   fail = 0;
 const check = (name, cond) => {
@@ -37,23 +36,16 @@ const seedR1 = () => ({
 
 const mp = await automator.connect({ wsEndpoint: 'ws://127.0.0.1:9420' });
 try {
-  // Warm-up: ensure the simulator has rendered before we drive it.
-  for (let i = 1; i <= 12; i++) {
-    const ok = await mp
-      .evaluate(() => !!(getCurrentPages() && getCurrentPages().length))
-      .catch(() => false);
-    if (ok) break;
-    await sleep(2000);
-  }
+  await warmUp(mp);
   // Seed one routine; clear prefs so onLoad fallback doesn't interfere.
   await mp.evaluate((seed) => {
     wx.removeStorageSync('group-timer-prefs');
     wx.setStorageSync('group-timer-routines', [seed]);
     wx.reLaunch({ url: '/pages/home/home?edit=r1' }); // real onLoad with options.edit
   }, seedR1());
-  await sleep(1500);
 
-  // (A) prefill
+  // (A) prefill — wait for onLoad({edit:'r1'}) to have actually landed.
+  await waitForData(mp, 'pages/home/home', { editId: 'r1' });
   let home = await mp.evaluate(() => {
     const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
     return { editId: h.data.editId, items: h.data.items, groups: h.data.groups };
@@ -73,7 +65,9 @@ try {
     h.setData({ groups: '1', items: [{ name: '改了', work: 45, rest: 15, ow: true, or: true }] });
     h.saveRoutine(); // -> wx.reLaunch to routines page
   });
-  await sleep(1500);
+  // Wait for the navigation saveRoutine triggers, not for the storage write it
+  // should have caused — otherwise the wait becomes the assertion.
+  await waitForRoute(mp, 'pages/routines/routines');
   let after = await mp.evaluate((KEY) => {
     const list = wx.getStorageSync(KEY) || [];
     const r = list.find((x) => x.id === 'r1');
@@ -87,7 +81,7 @@ try {
 
   // (C) save as new (no editId) -> appends
   await mp.evaluate(() => wx.reLaunch({ url: '/pages/home/home' })); // editId null
-  await sleep(1500);
+  await waitForRoute(mp, 'pages/home/home');
   await mp.evaluate(() => {
     const h = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/home/home');
     // groups:'1' so one round is built; ow/or true so the per-item 20/3 wins over
@@ -95,7 +89,7 @@ try {
     h.setData({ groups: '1', items: [{ name: '新', work: 20, rest: 3, ow: true, or: true }] });
     h.saveRoutine();
   });
-  await sleep(1500);
+  await waitForRoute(mp, 'pages/routines/routines');
   let created = await mp.evaluate((KEY) => {
     const list = wx.getStorageSync(KEY) || [];
     return { count: list.length, last: list[list.length - 1] };
