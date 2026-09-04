@@ -57,17 +57,23 @@ function waitForRoute(mp, route, options = {}) {
 function waitForData(mp, route, expected, options = {}) {
   return waitUntil(
     mp,
-    ({ want, exp }) => {
+    ({ want, entries }) => {
       const pages = getCurrentPages();
       if (!pages || !pages.length) return null;
       const p = pages.find((x) => x.route === want || x.__route__ === want);
       if (!p) return null;
-      for (const k of Object.keys(exp)) {
-        if (p.data[k] !== exp[k]) return null;
+      for (const [key, wantValue] of entries) {
+        // Supports 'editId' and 'routines[0].name' alike, so a caller can wait
+        // on one field of an array without deep-comparing the whole thing.
+        const got = key
+          .replace(/\[(\d+)\]/g, '.$1')
+          .split('.')
+          .reduce((o, k) => (o == null ? o : o[k]), p.data);
+        if (JSON.stringify(got) !== JSON.stringify(wantValue)) return null;
       }
       return true;
     },
-    { want: route, exp: expected },
+    { want: route, entries: Object.entries(expected) },
     { label: `page ${route} with data ${JSON.stringify(expected)}`, ...options },
   );
 }

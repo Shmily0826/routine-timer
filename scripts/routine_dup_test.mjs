@@ -2,15 +2,9 @@
 // Covers: duplicate clones a routine with a new id + （副本） suffix, keeps the
 // same rounds, and does not mutate the source.
 import automator from 'miniprogram-automator';
+import { waitForData, warmUp, installGuards } from './automation/wait.mjs';
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-process.on('unhandledRejection', async (e) => {
-  try {
-    await mp?.disconnect?.();
-  } catch (_) {}
-  console.error('UNHANDLED REJECTION:', e && e.message);
-  process.exit(1);
-});
+installGuards(() => mp);
 let pass = 0,
   fail = 0;
 const check = (name, cond) => {
@@ -37,6 +31,7 @@ const seed = () => ({
 
 const mp = await automator.connect({ wsEndpoint: 'ws://127.0.0.1:9420' });
 try {
+  await warmUp(mp);
   await mp.evaluate(
     (KEY, s) => {
       wx.setStorageSync(KEY, [s]);
@@ -45,14 +40,25 @@ try {
     ROUTINES,
     seed(),
   );
-  await sleep(1500);
+  // Wait for the routines page to have *reloaded from the seeded storage*.
+  // Sleeping here was the whole bug: the previous suite leaves this same page
+  // on screen with its own list still in data, so if the reLaunch has not
+  // landed yet, duplicate() clones from that stale list and writes it back —
+  // producing 3 routines where 2 were expected, with the clone carrying the
+  // previous suite's rounds.
+  await waitForData(mp, 'pages/routines/routines', {
+    'routines.length': 1,
+    'routines[0].name': 'Editing',
+    'routines[0].rounds[0].workSec': 50,
+  });
 
   // Clone the first routine via its page method (synthetic event).
   await mp.evaluate(() => {
     const r = getCurrentPages().find((p) => (p.route || p.__route__) === 'pages/routines/routines');
     r.duplicate({ currentTarget: { dataset: { index: 0 } } });
   });
-  await sleep(800);
+  // No wait: duplicate() writes storage synchronously and calls load(), so by
+  // the time evaluate() resolves both are already done.
 
   const out = await mp.evaluate((KEY) => {
     const list = wx.getStorageSync(KEY) || [];
