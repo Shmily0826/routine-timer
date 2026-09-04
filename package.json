@@ -13,10 +13,11 @@
     "history": "node scripts/history_test.mjs",
     "fixes": "node scripts/fixes_test.mjs",
     "edge": "node scripts/edge_test.mjs",
+    "features": "node scripts/verify_features.mjs",
     "ci": "npm run typecheck && npm run build:wechat && npm run test && npm run format:check",
     "format": "prettier --write \"miniprogram/**/*.{ts,wxss,json}\" \"scripts/**/*.{js,mjs}\" \"test/**/*.mjs\" \"*.json\"",
     "format:check": "prettier --check \"miniprogram/**/*.{ts,wxss,json}\" \"scripts/**/*.{js,mjs}\" \"test/**/*.mjs\" \"*.json\"",
-    "verify": "npm run typecheck && npm run build:wechat && npm run test && npm run recovery && npm run routine-edit && npm run routine-dup && npm run prefs && npm run history && npm run fixes && npm run edge && npm run smoke"
+    "verify": "npm run typecheck && npm run build:wechat && npm run test && npm run recovery && npm run routine-edit && npm run routine-dup && npm run prefs && npm run history && npm run fixes && npm run edge && npm run features && npm run smoke"
   },
   "devDependencies": {
     "miniprogram-api-typings": "^3.12.0",
