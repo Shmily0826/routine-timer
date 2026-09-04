@@ -154,3 +154,31 @@
   display: block;
   line-height: 1.8;
 }
+.help {
+  margin-top: 24rpx;
+}
+.help-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  margin-bottom: 8rpx;
+}
+.qa {
+  padding: 24rpx 0;
+  border-bottom: 1px solid var(--borderRow, #edf0f5);
+}
+.qa:last-child {
+  border-bottom: none;
+}
+.q {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--fgPrimary, #172033);
+  margin-bottom: 10rpx;
+}
+.a {
+  display: block;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: var(--fgMuted, #637083);
+}

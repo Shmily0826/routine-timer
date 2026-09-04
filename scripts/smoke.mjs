@@ -13,6 +13,7 @@
 //   cli auto --project D:\CODE\project\Timer --port <idePort> --auto-port 9420 --trust-project
 // Run: node scripts/smoke.mjs     (start on the Home page)
 import automator from 'miniprogram-automator';
+import { waitForRoute } from './automation/wait.mjs';
 
 const WS = process.env.WS_ENDPOINT || 'ws://127.0.0.1:9420';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -135,22 +136,8 @@ try {
       wx.reLaunch({ url: '/pages/home/home' });
     } catch (_) {}
   });
-  await sleep(1500);
-  // ---------- warm-up: the simulator may not have rendered a page yet ----------
-  let page = null;
-  for (let i = 1; i <= 12; i++) {
-    try {
-      const p = await mp.currentPage();
-      if (p && p.path) {
-        page = p;
-        break;
-      }
-    } catch (_) {}
-    console.log(`  ..waiting for the simulator page (${i})`);
-    await sleep(2500);
-  }
-  if (!page) throw new Error('simulator never produced a page; is the project open in DevTools?');
-  check('on home page', page.path.includes('home'), page.path);
+  const page = await waitForRoute(mp, 'pages/home/home', { timeout: 15000 });
+  check('on home page', !!page, page?.path || 'timeout');
 
   // ---------- Session A: 3 rounds / 3s work / 1s rest ----------
   await configure(3, 3, 1);
@@ -229,7 +216,7 @@ try {
       wx.reLaunch({ url: '/pages/home/home' });
     } catch (_) {}
   });
-  await sleep(1500);
+  await waitForRoute(mp, 'pages/home/home', { timeout: 15000 });
   await configure(3, 60, 5);
   await tapSel('button.start', 'start C');
   await sleep(2000);
