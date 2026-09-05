@@ -10,6 +10,13 @@
     <button class="secondary" open-type="feedback">意见反馈</button>
   </view>
 
+  <view class="card">
+    <view class="help-title">数据管理</view>
+    <view class="note"><text class="sub">数据只保存在本机。换手机或清除小程序数据前，可先「导出数据」把全部内容复制到剪贴板；在新设备上「导入数据」即可恢复。</text></view>
+    <button class="secondary" bindtap="exportData">导出数据</button>
+    <button class="secondary" bindtap="importData">导入数据</button>
+  </view>
+
   <view class="card help">
     <view class="help-title">使用提示</view>
 
@@ -17,6 +24,6 @@
 
     <view class="qa"><text class="q">没听到提示音或感觉不到震动？</text><text class="a">提示音不受手机静音开关影响，但受媒体音量控制；震动需要系统开启「触感反馈」（设置 → 声音与触感）。</text></view>
 
-    <view class="qa"><text class="q">换手机后数据会丢吗？</text><text class="a">所有数据只存在本机，清除小程序数据或更换设备会丢失，目前没有云同步。历史记录最多保留最近 100 条。</text></view>
+    <view class="qa"><text class="q">换手机后数据会丢吗？</text><text class="a">所有数据只存在本机，清除小程序数据或更换设备会丢失，目前没有云同步。可先用「导出数据」备份到剪贴板，再在新设备「导入数据」恢复。历史记录最多保留最近 100 条。</text></view>
   </view>
 </view>
