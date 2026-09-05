@@ -55,6 +55,8 @@ export function loadPage(rel, options = {}) {
   let now = options.startTime ?? Date.parse('2026-09-03T10:00:00Z');
   const intervals = new Map();
   let nextId = 1;
+  // Simulated system clipboard, so export→import round-trips can be tested.
+  let clipboard = typeof options.clipboard === 'string' ? options.clipboard : '';
 
   Date.now = () => now;
   globalThis.setInterval = (fn, ms) => {
@@ -105,6 +107,14 @@ export function loadPage(rel, options = {}) {
           confirm: options.modalConfirm !== false,
           cancel: options.modalConfirm === false,
         });
+    },
+    setClipboardData: (o) => {
+      clipboard = o && o.data;
+      calls.push('clipboard:set');
+      if (o && o.success) o.success({ data: clipboard });
+    },
+    getClipboardData: (o) => {
+      if (o && o.success) o.success({ data: clipboard });
     },
   };
 
@@ -161,7 +171,19 @@ export function loadPage(rel, options = {}) {
     else globalThis.Page = real.Page;
   };
 
-  return { page, store, calls, setDataCalls, clock, audio, dispose };
+  return {
+    page,
+    store,
+    calls,
+    setDataCalls,
+    clock,
+    audio,
+    dispose,
+    setClipboard: (v) => (clipboard = v),
+    get clipboard() {
+      return clipboard;
+    },
+  };
 }
 
 /** Filter helper: `matching(h.calls, 'keep=')` → ['keep=true', 'keep=false'] */

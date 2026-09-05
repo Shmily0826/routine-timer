@@ -128,6 +128,24 @@ try {
   // is why this is asserted rather than assumed.
   const wxml = readFileSync('miniprogram/pages/about/about.wxml', 'utf8');
   check('feedback button uses open-type="feedback"', wxml.includes('open-type="feedback"'), '');
+
+  // 数据管理：导出/导入。open-type 写错只是静默死按钮，所以抽方法 + 绑事件都查。
+  const aboutHandlers = await mp.evaluate(() => {
+    const p = getCurrentPages().find((x) => (x.route || x.__route__) === 'pages/about/about');
+    return p ? { exportData: typeof p.exportData, importData: typeof p.importData } : null;
+  });
+  check(
+    'about exposes exportData handler',
+    !!(aboutHandlers && aboutHandlers.exportData === 'function'),
+    JSON.stringify(aboutHandlers),
+  );
+  check(
+    'about exposes importData handler',
+    !!(aboutHandlers && aboutHandlers.importData === 'function'),
+    JSON.stringify(aboutHandlers),
+  );
+  check('about.wxml binds exportData', wxml.includes('bindtap="exportData"'), '');
+  check('about.wxml binds importData', wxml.includes('bindtap="importData"'), '');
 } catch (e) {
   console.log('RAW ERROR: ' + (e && (e.stack || e.message)));
   check('feature verification completed', false, e && e.message);
