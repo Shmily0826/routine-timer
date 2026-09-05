@@ -13,7 +13,7 @@
 //   cli auto --project D:\CODE\project\Timer --port <idePort> --auto-port 9420 --trust-project
 // Run: node scripts/smoke.mjs     (start on the Home page)
 import automator from 'miniprogram-automator';
-import { waitForRoute } from './automation/wait.mjs';
+import { waitForRoute, waitForData } from './automation/wait.mjs';
 
 const WS = process.env.WS_ENDPOINT || 'ws://127.0.0.1:9420';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -155,17 +155,18 @@ try {
   );
 
   await tapSel('button.start', 'start A');
-  await sleep(1500);
-  check(
-    'start navigates to timer',
-    (await mp.currentPage()).path.includes('timer'),
-    (await mp.currentPage()).path,
-  );
+  // Poll the route flip instead of a fixed sleep: the tap lands on a real
+  // button and navigation can still be mid-transition when a sleep would fire.
+  const tpA = await waitForRoute(mp, 'pages/timer/timer', { timeout: 15000 });
+  check('start navigates to timer', !!tpA, tpA ? 'pages/timer/timer' : 'timeout');
 
-  let td = await readData();
+  // Wait for onLoad to have applied the session (group/total populated), not
+  // merely for time to pass — a fixed sleep raced the home page here before.
+  const okStart = await waitForData(mp, 'pages/timer/timer', { group: 1, total: 3 }, { timeout: 6000 });
+  let td = await readData().catch(() => ({}));
   check(
     'timer starts at round 1 / total 3',
-    td.group === 1 && td.total === 3,
+    !!okStart,
     `group=${td.group} total=${td.total}`,
   );
   const d0 = td.display;
@@ -268,8 +269,8 @@ try {
   // ---------- Recovery: start a long session, leave, discard ----------
   await configure(2, 180, 10);
   await tapSel('button.start', 'start recovery session');
-  await sleep(2000);
-  check('long session started', (await mp.currentPage()).path.includes('timer'), 'timer active');
+  const tpR = await waitForRoute(mp, 'pages/timer/timer', { timeout: 15000 });
+  check('long session started', !!tpR, tpR ? 'timer active' : 'timeout');
 
   home = await stopToHome();
   let rec = await readData();
@@ -286,12 +287,8 @@ try {
 
   // ---------- Routines (last: no back button on that page) ----------
   await tapSel('button.secondary', 'routines');
-  await sleep(1800);
-  check(
-    'routines page reached',
-    (await mp.currentPage()).path.includes('routines'),
-    (await mp.currentPage()).path,
-  );
+  const tpR2 = await waitForRoute(mp, 'pages/routines/routines', { timeout: 15000 });
+  check('routines page reached', !!tpR2, tpR2 ? 'pages/routines/routines' : 'timeout');
 
   const before = (await readData()).routines.length;
   await tapSel('button.start', 'save routine');
